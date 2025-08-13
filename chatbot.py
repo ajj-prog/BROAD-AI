@@ -7,7 +7,7 @@ import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 import random
-import time  # Added for cycling questions
+import time  # for cycling questions
 
 # ---------------------
 # Config / Load
@@ -141,7 +141,7 @@ if st.session_state.page == "🏠 Home":
     )
 
     # ---------------------
-    # Rotating sample Q&A (NEW CHANGE)
+    # Rotating sample Q&A
     # ---------------------
     sample_qa = [
         ("Where can I find the best beaches in Saint Lucia?", "Try Reduit Beach or Anse Chastanet for crystal clear water and soft sand!"),

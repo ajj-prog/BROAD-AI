@@ -214,25 +214,21 @@ if st.session_state.page == "🏠 Home":
 # --------------------- ITINERARY PLANNER --------------------- #
 elif st.session_state.page == "📅 Itinerary Planner":
     show_loader()
-
     st.header("📅 Plan Your Itinerary")
     user_interests = st.text_input("Enter your interests (comma separated, e.g., beach, hiking, seafood, education):")
     combined_df = pd.concat([tourism_df, restaurant_df, cultural_df, edu_df], ignore_index=True)
-
     if user_interests:
         keywords = [k.strip().lower() for k in user_interests.split(",")]
         mask = combined_df.apply(lambda row: any(kw in str(row).lower() for kw in keywords), axis=1)
         filtered_df = combined_df[mask]
     else:
         filtered_df = combined_df.copy()
-
     if filtered_df.empty:
         st.warning("No matches found. Try different interests.")
     else:
         if "Rating" in filtered_df.columns:
             filtered_df["Rating"] = pd.to_numeric(filtered_df["Rating"], errors="coerce")
             filtered_df = filtered_df.sort_values(by="Rating", ascending=False)
-
         for source, group in filtered_df.groupby("Source"):
             header = "Where are you heading o_o" if source=="Tourism" else \
                      "Where to eat > <" if source=="Restaurant" else \
@@ -243,7 +239,6 @@ elif st.session_state.page == "📅 Itinerary Planner":
                             f"⭐ {r.get('Rating','N/A')} — {r.get('Type','N/A')}  \n"
                             f"📍 {r.get('Location','Unknown')}  \n"
                             f"💰 {r.get('Price','N/A')}")
-
         map_df = filtered_df.dropna(subset=["Latitude","Longitude"]).copy()
         if not map_df.empty:
             m = folium.Map(location=[13.9094,-60.9789], zoom_start=10, tiles="OpenStreetMap")
@@ -259,7 +254,6 @@ elif st.session_state.page == "📅 Itinerary Planner":
                     icon=folium.Icon(color=color_map.get(r["Source"],"gray"))
                 ).add_to(m)
             st_folium(m, width=700, height=500)
-
         csv_data = filtered_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="💾 Save Itinerary as CSV",
@@ -267,7 +261,6 @@ elif st.session_state.page == "📅 Itinerary Planner":
             file_name="broad_itinerary.csv",
             mime="text/csv"
         )
-
         if st.button("Generate AI itinerary"):
             try:
                 model = genai.GenerativeModel("gemini-2.0-flash")
@@ -288,12 +281,10 @@ Do not include greetings or sign-offs.
 # --------------------- CHATBOT --------------------- #
 elif st.session_state.page == "💬 Chatbot":
     show_loader()
-
     st.header("💬 Chat with BROAD")
     for msg in st.session_state.chat_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-
     if user_input := st.chat_input("Ask me about Saint Lucia..."):
         st.session_state.chat_messages.append({"role":"user","content":user_input})
         with st.chat_message("user"):

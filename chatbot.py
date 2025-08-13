@@ -9,9 +9,9 @@ from streamlit_folium import st_folium
 import random
 import time
 
-# ---------------------
+# =========================
 # Config / Load
-# ---------------------
+# =========================
 load_dotenv()
 genai.configure(api_key=os.getenv("SECRET_KEY"))
 
@@ -22,7 +22,7 @@ def clean_columns(df):
 tourism_df = clean_columns(pd.read_csv("tourism.csv"))
 edu_df = clean_columns(pd.read_csv("edu.csv"))
 cultural_df = clean_columns(pd.read_csv("cultural.csv"))
-restaurant_df = clean_columns(pd.read_csv("resturant.csv"))
+restaurant_df = clean_columns(pd.read_csv("resturant.csv"))  # (kept filename as-is)
 
 # Mark origins
 tourism_df['Source'] = "Tourism"
@@ -37,76 +37,142 @@ for df in [tourism_df, restaurant_df, cultural_df, edu_df]:
             df[col] = default
         df[col] = df[col].fillna(default)
 
-# ---------------------
+# =========================
 # Session state defaults
-# ---------------------
+# =========================
 if "page" not in st.session_state: st.session_state.page = "🏠 Home"
 if "active_button" not in st.session_state: st.session_state.active_button = "🏠 Home"
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
+if "show_loader" not in st.session_state: st.session_state.show_loader = True
+if "qa_index" not in st.session_state: st.session_state.qa_index = 0
+if "qa_cycle_enabled" not in st.session_state: st.session_state.qa_cycle_enabled = False
 
-# ---------------------
-# Custom loading screen
-# ---------------------
-loading_placeholder = st.empty()
-loading_html = """
-<div style="display:flex; justify-content:center; align-items:center; height:100vh; background: linear-gradient(to bottom, #FFA500, #800080); color:white; flex-direction:column;">
-    <h1 style="font-size:3em;">🌴 BROAD ISLAND INTEL 🌴</h1>
-    <div style="font-size:3em; margin:20px;">
-        <span class="bounce">⏳</span>
+# =========================
+# Full-page loading screen (covers entire UI)
+# =========================
+if st.session_state.show_loader:
+    loading_screen = """
+    <style>
+    #loading-container {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: linear-gradient(to bottom, #FF8C00, #7B1FA2);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+    }
+    .bounce {
+        display: inline-block;
+        animation: bounce 1s infinite;
+        font-size: 3em;
+    }
+    </style>
+
+    <style id="hide-ui">header, footer, .stSidebar {display: none !important;}</style>
+    <div id="loading-container">
+        <h1 style="font-size:3em; text-align:center;">🌴 BROAD ISLAND INTEL 🌴</h1>
+        <div style="margin: 20px;">
+            <span class="bounce">⏳</span>
+        </div>
+        <p style="font-size:1.5em;">Just a minute ^^</p>
     </div>
-    <p style="font-size:1.5em;">Just a minute ^^</p>
-</div>
+    """
+    st.markdown(loading_screen, unsafe_allow_html=True)
+    # Simulate load (or replace with real preload work)
+    time.sleep(2.5)
+    # Remove loader and reveal UI
+    st.session_state.show_loader = False
+    st.markdown("""
+    <script>
+      const loader = document.getElementById('loading-container');
+      if (loader) loader.style.display = 'none';
+      const hideUI = document.getElementById('hide-ui');
+      if (hideUI) hideUI.remove();
+    </script>
+    """, unsafe_allow_html=True)
 
+# =========================
+# Global styling (gradient + controls + chat)
+# =========================
+st.markdown("""
 <style>
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+/* App & Sidebar background gradients (orange -> purple, top->bottom) */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(to bottom, #FF8C00 0%, #8E24AA 45%, #6A1B9A 100%);
+    color: #FFFFFF;
 }
-.bounce {
-  display: inline-block;
-  animation: bounce 1s infinite;
+[data-testid="stSidebar"] {
+    background: linear-gradient(to bottom, #FF8C00 0%, #8E24AA 100%);
 }
-</style>
-"""
-loading_placeholder.markdown(loading_html, unsafe_allow_html=True)
-time.sleep(3)  # simulate loading
-loading_placeholder.empty()
 
-# ---------------------
-# Custom page styling
-# ---------------------
-page_bg_color = """
-<style>
-body {
-    background: linear-gradient(to bottom, #FFA500, #800080);
-    color: #fff;
+/* Buttons (match brand colors) */
+.stButton>button, .stDownloadButton>button {
+    background: linear-gradient(90deg, #FF8C00, #8E24AA);
+    color: #FFFFFF;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.15);
 }
-.stButton>button {
-    background: linear-gradient(90deg,#FFA500,#800080);
-    color: white;
-    border-radius: 10px;
-    height: 3em;
+.stButton>button:hover, .stDownloadButton>button:hover {
+    background: linear-gradient(90deg, #FFA733, #9C27B0);
 }
-.stButton>button:hover {
-    background: linear-gradient(90deg,#FFB733,#9B59B6);
-    color: white;
+
+/* Inputs not transparent */
+[data-testid="stTextInputRoot"] input,
+textarea, select {
+    background: rgba(255,255,255,0.95) !important;
+    color: #000 !important;
+    border-radius: 10px !important;
 }
 .stTextInput>div>div>input {
-    background-color: rgba(255,255,255,0.9);
-    color: #000;
-}
-.st-chat-message-content {
-    background-color: rgba(255,255,255,0.9) !important;
+    background: rgba(255,255,255,0.95) !important;
     color: #000 !important;
 }
-</style>
-"""
-st.markdown(page_bg_color, unsafe_allow_html=True)
 
-# ---------------------
-# Sidebar
-# ---------------------
+/* Chat message bubbles */
+[data-testid="stChatMessage"] {
+    background: rgba(255,255,255,0.9);
+    color: #000;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+}
+.st-chat-message-content {
+    background: rgba(255,255,255,0.9) !important;
+    color: #000 !important;
+    border-radius: 12px !important;
+}
+
+/* Friendly cards */
+.broad-card {
+    background: rgba(255,255,255,0.14);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+}
+
+/* Sidebar "Active" pill */
+.sidebar-active {
+    padding:6px 8px; border-radius:10px; font-weight:bold; color:white;
+    background: linear-gradient(90deg,#FF8C00,#8E24AA); margin-top:8px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
+# Sidebar Navigation
+# =========================
 st.sidebar.title("🌴 BROAD ISLAND INTEL")
 pages = ["🏠 Home", "📅 Itinerary Planner", "💬 Chatbot"]
 for p in pages:
@@ -115,44 +181,43 @@ for p in pages:
         st.session_state.active_button = p
 
 st.sidebar.markdown(
-    f"<div style='padding:6px 8px;border-radius:6px;font-weight:bold;color:white;"
-    f"background:linear-gradient(90deg,#FFA500,#800080);margin-top:8px'>"
-    f"Active: {st.session_state.active_button}</div>",
+    f"<div class='sidebar-active'>Active: {st.session_state.active_button}</div>",
     unsafe_allow_html=True
 )
 
-# ---------------------
+# =========================
 # Page: Home
-# ---------------------
+# =========================
 if st.session_state.page == "🏠 Home":
     st.markdown(
         """
-        <div style='padding:30px; border-radius:15px; background: rgba(255,255,255,0.15);'>
+        <div class='broad-card' style='padding:30px;'>
             <h1 style='text-align:center; color:#FFFFFF;'>🌴 Welcome to BROAD ISLAND INTEL 🌴</h1>
             <p style='text-align:center; color:#FFF0C1; font-size:18px;'>
-                Your Saint Lucia guide for <span style="color:#FF9A00; font-weight:bold;">Tourism</span>, 
-                <span style="color:#D580FF; font-weight:bold;">Culture</span>, 
-                <span style="color:#FF9A00; font-weight:bold;">Education</span>, and <span style="color:#D580FF; font-weight:bold;">Cuisine</span>!  
+                Your Saint Lucia guide for <span style="color:#FFD24C; font-weight:bold;">Tourism</span>, 
+                <span style="color:#E1B0FF; font-weight:bold;">Culture</span>, 
+                <span style="color:#FFD24C; font-weight:bold;">Education</span>, and <span style="color:#E1B0FF; font-weight:bold;">Cuisine</span>!  
             </p>
         </div>
         """, unsafe_allow_html=True
     )
 
+    # Four friendly category cards
     st.markdown("""
-    <div style='display:flex; gap:15px; margin-top:20px;'>
-        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+    <div style='display:flex; gap:16px; margin-top:20px; flex-wrap:wrap;'>
+        <div class='broad-card' style='flex:1; min-width:220px;'>
             <h3>🏖 Explore Tourism</h3>
             <p>Discover top beaches, waterfalls, and scenic spots around Saint Lucia.</p>
         </div>
-        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div class='broad-card' style='flex:1; min-width:220px;'>
             <h3>🎭 Dive into Culture</h3>
             <p>Learn about historical sites, traditions, and local festivals.</p>
         </div>
-        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div class='broad-card' style='flex:1; min-width:220px;'>
             <h3>🏫 Education</h3>
             <p>Explore museums, libraries, and educational landmarks.</p>
         </div>
-        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div class='broad-card' style='flex:1; min-width:220px;'>
             <h3>🍴 Local Cuisine</h3>
             <p>Find the best restaurants and authentic Saint Lucian dishes.</p>
         </div>
@@ -161,38 +226,64 @@ if st.session_state.page == "🏠 Home":
 
     st.markdown(
         """
-        <p style='margin-top:25px; color:#FFF0C1; font-size:16px;'>
-        Use the sidebar to navigate through pages, plan itineraries, or chat with our AI assistant for recommendations!  
+        <p style='margin-top:25px; color:#FFF7DA; font-size:16px;'>
+        Use the sidebar to explore pages, plan itineraries, or chat with our AI assistant for quick recommendations.  
         🌞 Start your Saint Lucia adventure now! 🌴
         </p>
         """, unsafe_allow_html=True
     )
 
-    # ---------------------
-    # Rotating sample Q&A
-    # ---------------------
+    # ---------- Rotating sample Q&A (cycles) ----------
     sample_qa = [
-        ("Where can I find the best beaches in Saint Lucia?", "Try Reduit Beach or Anse Chastanet for crystal clear water and soft sand!"),
-        ("What is a must-see cultural landmark?", "The Derek Walcott Square in Castries is perfect for history and photo opportunities."),
-        ("Any recommendations for authentic Saint Lucian food?", "Don’t miss trying the national dish, Green Fig & Saltfish, at a local restaurant!"),
-        ("Where can I go hiking?", "The Tet Paul Nature Trail offers moderate hikes with stunning views of the Pitons."),
-        ("Are there museums to visit?", "Yes! The National Art Gallery and the Saint Lucia Folk Research Centre are great spots."),
+        ("Where can I find the best beaches in Saint Lucia?",
+         "Try Reduit Beach or Anse Chastanet for crystal-clear water and soft sand!"),
+        ("What is a must-see cultural landmark?",
+         "Derek Walcott Square in Castries is perfect for history and photo opportunities."),
+        ("Any recommendations for authentic Saint Lucian food?",
+         "Don’t miss the national dish, Green Fig & Saltfish, at a local spot!"),
+        ("Where can I go hiking?",
+         "Tet Paul Nature Trail offers moderate hikes with stunning views of the Pitons."),
+        ("Are there museums to visit?",
+         "Yes—check out the Saint Lucia Folk Research Centre and local art galleries."),
     ]
-    qa_sample = random.choice(sample_qa)
+
+    # Controls for cycling
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.session_state.qa_cycle_enabled = st.toggle("🔁 Auto-cycle Q&A", value=st.session_state.qa_cycle_enabled)
+    with col2:
+        if st.button("⏭ Next Q&A"):
+            st.session_state.qa_index = (st.session_state.qa_index + 1) % len(sample_qa)
+
+    q, a = sample_qa[st.session_state.qa_index]
     st.markdown(
         f"""
-        <div style='margin-top:30px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
+        <div style='margin-top:16px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
             <h4 style='color:#FFD580;'>💡 Sample Question</h4>
-            <p style='color:#FFFFFF; font-weight:bold;'>{qa_sample[0]}</p>
+            <p style='color:#FFFFFF; font-weight:bold; margin-bottom:10px;'>{q}</p>
             <h4 style='color:#FFD580;'>🤖 Example Response</h4>
-            <p style='color:#FFF0C1;'>{qa_sample[1]}</p>
+            <p style='color:#FFF0C1;'>{a}</p>
         </div>
-        """, unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True
     )
 
-# ---------------------
+    # Auto-cycle logic (only if enabled, and only on Home)
+    if st.session_state.qa_cycle_enabled:
+        time.sleep(4)  # cycle interval (seconds)
+        st.session_state.qa_index = (st.session_state.qa_index + 1) % len(sample_qa)
+        st.experimental_rerun()
+
+    # Page overview footer (brief)
+    st.markdown("---")
+    st.markdown("**Page Quick Guide**  \n"
+                "• 🏠 Home: Friendly overview + rotating Q&A.  \n"
+                "• 📅 Itinerary Planner: Filter places by interest, map view, and AI itinerary.  \n"
+                "• 💬 Chatbot: Ask anything about Saint Lucia.")
+
+# =========================
 # Page: Itinerary Planner
-# ---------------------
+# =========================
 elif st.session_state.page == "📅 Itinerary Planner":
     st.header("📅 Plan Your Itinerary")
     user_interests = st.text_input("Enter your interests (comma separated, e.g., beach, hiking, seafood, education):")
@@ -208,14 +299,16 @@ elif st.session_state.page == "📅 Itinerary Planner":
     if filtered_df.empty:
         st.warning("No matches found. Try different interests.")
     else:
+        # Sort by rating if numeric
         if "Rating" in filtered_df.columns:
             filtered_df["Rating"] = pd.to_numeric(filtered_df["Rating"], errors="coerce")
             filtered_df = filtered_df.sort_values(by="Rating", ascending=False)
 
+        # Display itinerary entries grouped by source
         for source, group in filtered_df.groupby("Source"):
-            header = "Where are you heading o_o" if source=="Tourism" else \
-                     "Where to eat > <" if source=="Restaurant" else \
-                     "Culture trip incoming 🎭" if source=="Cultural" else "Education stops 🏫"
+            header = "Where are you heading o_o" if source == "Tourism" else \
+                     "Where to eat > <" if source == "Restaurant" else \
+                     "Culture trip incoming 🎭" if source == "Cultural" else "Education stops 🏫"
             st.subheader(header)
             for _, r in group.iterrows():
                 st.markdown(f"**{r.get('Name','Unknown')}**  \n"
@@ -223,10 +316,11 @@ elif st.session_state.page == "📅 Itinerary Planner":
                             f"📍 {r.get('Location','Unknown')}  \n"
                             f"💰 {r.get('Price','N/A')}")
 
-        map_df = filtered_df.dropna(subset=["Latitude","Longitude"]).copy()
+        # Interactive map
+        map_df = filtered_df.dropna(subset=["Latitude", "Longitude"]).copy()
         if not map_df.empty:
-            m = folium.Map(location=[13.9094,-60.9789], zoom_start=10, tiles="OpenStreetMap")
-            color_map = {"Tourism":"blue","Restaurant":"red","Cultural":"green","Education":"purple"}
+            m = folium.Map(location=[13.9094, -60.9789], zoom_start=10, tiles="OpenStreetMap")
+            color_map = {"Tourism": "blue", "Restaurant": "red", "Cultural": "green", "Education": "purple"}
             for _, r in map_df.iterrows():
                 folium.Marker(
                     location=[r["Latitude"], r["Longitude"]],
@@ -235,10 +329,11 @@ elif st.session_state.page == "📅 Itinerary Planner":
                           f"{r.get('Type','N/A')}<br>"
                           f"💰 {r.get('Price','N/A')}",
                     tooltip=r.get('Name','Unknown'),
-                    icon=folium.Icon(color=color_map.get(r["Source"],"gray"))
+                    icon=folium.Icon(color=color_map.get(r["Source"], "gray"))
                 ).add_to(m)
             st_folium(m, width=700, height=500)
 
+        # Save itinerary as CSV
         csv_data = filtered_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="💾 Save Itinerary as CSV",
@@ -247,7 +342,8 @@ elif st.session_state.page == "📅 Itinerary Planner":
             mime="text/csv"
         )
 
-        if st.button("Generate AI itinerary"):
+        # AI-generated itinerary
+        if st.button("✨ Generate AI itinerary"):
             try:
                 model = genai.GenerativeModel("gemini-2.0-flash")
                 places_text = filtered_df.to_string(index=False)
@@ -264,9 +360,14 @@ Do not include greetings or sign-offs.
             except Exception as e:
                 st.error(f"AI error: {e}")
 
-# ---------------------
+    # Page overview footer
+    st.markdown("---")
+    st.markdown("**About this page:** Filter by interests, browse grouped results, view locations on a map, "
+                "download your list, and generate a quick AI itinerary.")
+
+# =========================
 # Page: Chatbot
-# ---------------------
+# =========================
 elif st.session_state.page == "💬 Chatbot":
     st.header("💬 Chat with BROAD")
     for msg in st.session_state.chat_messages:
@@ -274,7 +375,7 @@ elif st.session_state.page == "💬 Chatbot":
             st.markdown(msg["content"])
 
     if user_input := st.chat_input("Ask me about Saint Lucia..."):
-        st.session_state.chat_messages.append({"role":"user","content":user_input})
+        st.session_state.chat_messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.markdown(user_input)
         with st.spinner("Thinking..."):
@@ -282,10 +383,14 @@ elif st.session_state.page == "💬 Chatbot":
                 model = genai.GenerativeModel("gemini-2.0-flash")
                 chat = model.start_chat(history=st.session_state.gemini_history)
                 reply = chat.send_message(user_input).text
-                st.session_state.gemini_history.append({"role":"user","parts":[user_input]})
-                st.session_state.gemini_history.append({"role":"model","parts":[reply]})
+                st.session_state.gemini_history.append({"role": "user", "parts": [user_input]})
+                st.session_state.gemini_history.append({"role": "model", "parts": [reply]})
             except Exception as e:
                 reply = f"⚠️ Error: {e}"
-        st.session_state.chat_messages.append({"role":"assistant","content":reply})
+        st.session_state.chat_messages.append({"role": "assistant", "content": reply})
         with st.chat_message("assistant"):
             st.markdown(reply)
+
+    # Page overview footer
+    st.markdown("---")
+    st.markdown("**About this page:** Ask anything about Saint Lucia—tourism, culture, food, logistics—and get instant help.")

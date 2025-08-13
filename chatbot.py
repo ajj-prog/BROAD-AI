@@ -44,6 +44,26 @@ if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
 
 # ---------------------
+# Apply gradient background
+# ---------------------
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background: linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%);
+        color: #FFFFFF;
+    }
+    .highlight {
+        background-color: rgba(255, 255, 255, 0.15);
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True
+)
+
+# ---------------------
 # Sidebar
 # ---------------------
 st.sidebar.title("BROAD ISLAND INTEL")
@@ -64,13 +84,21 @@ st.sidebar.markdown(
 # Page: Home
 # ---------------------
 if st.session_state.page == "Home":
-    st.title("🌴 BROAD ISLAND INTEL")
+    st.markdown("<h1 style='color:#FFD700'>🌴 BROAD ISLAND INTEL</h1>", unsafe_allow_html=True)
     st.markdown("""
-    Welcome! BROAD ISLAND INTEL is your Saint Lucia cultural, tourism, and education guide.  
-    - Explore top tourist sites, cultural landmarks, and restaurants.  
-    - Plan your personalized itinerary.  
-    - Chat with the AI assistant for quick recommendations.
-    """)
+    <div class='highlight'>
+        Welcome to Saint Lucia's ultimate guide! BROAD ISLAND INTEL combines cultural, tourism, and education insights.
+    </div>
+    <div class='highlight'>
+        Explore top tourist sites, cultural landmarks, and must-try restaurants across the island.
+    </div>
+    <div class='highlight'>
+        Plan your personalized itinerary with our AI suggestions and interactive maps.
+    </div>
+    <div class='highlight'>
+        Chat with the AI assistant for quick recommendations or insider tips.
+    </div>
+    """, unsafe_allow_html=True)
 
 # ---------------------
 # Page: Itinerary Planner
@@ -90,12 +118,10 @@ elif st.session_state.page == "Itinerary Planner":
     if filtered_df.empty:
         st.warning("No matches found. Try different interests.")
     else:
-        # Sort by rating if numeric
         if "Rating" in filtered_df.columns:
             filtered_df["Rating"] = pd.to_numeric(filtered_df["Rating"], errors="coerce")
             filtered_df = filtered_df.sort_values(by="Rating", ascending=False)
 
-        # Display itinerary entries
         for source, group in filtered_df.groupby("Source"):
             header = "Where are you heading o_o" if source=="Tourism" else \
                      "Where to eat > <" if source=="Restaurant" else \
@@ -107,9 +133,6 @@ elif st.session_state.page == "Itinerary Planner":
                             f"📍 {r.get('Location','Unknown')}  \n"
                             f"💰 {r.get('Price','N/A')}")
 
-        # ---------------------
-        # Interactive map
-        # ---------------------
         map_df = filtered_df.dropna(subset=["Latitude","Longitude"]).copy()
         if not map_df.empty:
             m = folium.Map(location=[13.9094,-60.9789], zoom_start=10, tiles="OpenStreetMap")
@@ -126,9 +149,6 @@ elif st.session_state.page == "Itinerary Planner":
                 ).add_to(m)
             st_folium(m, width=700, height=500)
 
-        # ---------------------
-        # Save itinerary CSV
-        # ---------------------
         csv_data = filtered_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="💾 Save Itinerary as CSV",
@@ -137,9 +157,6 @@ elif st.session_state.page == "Itinerary Planner":
             mime="text/csv"
         )
 
-        # ---------------------
-        # AI-generated itinerary
-        # ---------------------
         if st.button("Generate AI itinerary"):
             model = genai.GenerativeModel("gemini-2.0-flash")
             places_text = filtered_df.to_string(index=False)

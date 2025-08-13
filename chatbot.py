@@ -44,13 +44,15 @@ if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
 
 # ---------------------
-# Apply gradient background
+# Apply full-page gradient background
 # ---------------------
 st.markdown(
     """
     <style>
-    .stApp {
-        background: linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%);
+    /* Full-page gradient background */
+    body, .stApp, .main {
+        background: linear-gradient(135deg, #FF7E5F, #8E2DE2);
+        background-attachment: fixed;
         color: #FFFFFF;
     }
     .highlight {
@@ -60,7 +62,8 @@ st.markdown(
         margin-bottom: 10px;
     }
     </style>
-    """, unsafe_allow_html=True
+    """,
+    unsafe_allow_html=True
 )
 
 # ---------------------

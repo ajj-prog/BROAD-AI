@@ -3,7 +3,7 @@ import pandas as pd
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
-import plotly.express as px
+import plotly.express as px  # kept if you want charts later
 import folium
 from streamlit_folium import st_folium
 import random
@@ -19,10 +19,11 @@ def clean_columns(df):
     df.columns = df.columns.str.strip().str.title()
     return df
 
+# Load CSVs
 tourism_df = clean_columns(pd.read_csv("tourism.csv"))
 edu_df = clean_columns(pd.read_csv("edu.csv"))
 cultural_df = clean_columns(pd.read_csv("cultural.csv"))
-restaurant_df = clean_columns(pd.read_csv("resturant.csv"))  # (kept filename as-is)
+restaurant_df = clean_columns(pd.read_csv("resturant.csv"))  # filename kept as provided
 
 # Mark origins
 tourism_df['Source'] = "Tourism"
@@ -44,40 +45,32 @@ if "page" not in st.session_state: st.session_state.page = "🏠 Home"
 if "active_button" not in st.session_state: st.session_state.active_button = "🏠 Home"
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
-if "show_loader" not in st.session_state: st.session_state.show_loader = True
 if "qa_index" not in st.session_state: st.session_state.qa_index = 0
 if "qa_cycle_enabled" not in st.session_state: st.session_state.qa_cycle_enabled = False
+if "loader_shown" not in st.session_state: st.session_state.loader_shown = False  # show loader only once
 
 # =========================
-# Full-page loading screen (covers entire UI)
+# One-time Full-page Loading Screen (auto dismiss after 3s)
 # =========================
-if st.session_state.show_loader:
-    loading_screen = """
+if not st.session_state.loader_shown:
+    loader_html = """
     <style>
     #loading-container {
-        position: fixed;
-        top: 0; left: 0;
+        position: fixed; top: 0; left: 0;
         width: 100vw; height: 100vh;
-        background: linear-gradient(to bottom, #FF8C00, #7B1FA2);
-        color: white;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
+        background: linear-gradient(to bottom, #FF8C00, #8E24AA);
+        color: white; display: flex; flex-direction: column;
+        justify-content: center; align-items: center; z-index: 9999;
     }
     @keyframes bounce {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-20px); }
     }
     .bounce {
-        display: inline-block;
-        animation: bounce 1s infinite;
-        font-size: 3em;
+        display: inline-block; animation: bounce 1s infinite; font-size: 3em;
     }
     </style>
 
-    <style id="hide-ui">header, footer, .stSidebar {display: none !important;}</style>
     <div id="loading-container">
         <h1 style="font-size:3em; text-align:center;">🌴 BROAD ISLAND INTEL 🌴</h1>
         <div style="margin: 20px;">
@@ -85,27 +78,24 @@ if st.session_state.show_loader:
         </div>
         <p style="font-size:1.5em;">Just a minute ^^</p>
     </div>
-    """
-    st.markdown(loading_screen, unsafe_allow_html=True)
-    # Simulate load (or replace with real preload work)
-    time.sleep(2.5)
-    # Remove loader and reveal UI
-    st.session_state.show_loader = False
-    st.markdown("""
+
     <script>
-      const loader = document.getElementById('loading-container');
-      if (loader) loader.style.display = 'none';
-      const hideUI = document.getElementById('hide-ui');
-      if (hideUI) hideUI.remove();
+    setTimeout(function(){
+        var loader = document.getElementById('loading-container');
+        if(loader) loader.style.display = 'none';
+    }, 3000);
     </script>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(loader_html, unsafe_allow_html=True)
+    # Flag so we don't show it again on reruns
+    st.session_state.loader_shown = True
 
 # =========================
-# Global styling (gradient + controls + chat)
+# Global styling (gradients, buttons, inputs, chat bubbles)
 # =========================
 st.markdown("""
 <style>
-/* App & Sidebar background gradients (orange -> purple, top->bottom) */
+/* App & Sidebar background gradients (more orange, top->bottom) */
 [data-testid="stAppViewContainer"] {
     background: linear-gradient(to bottom, #FF8C00 0%, #8E24AA 45%, #6A1B9A 100%);
     color: #FFFFFF;
@@ -116,28 +106,26 @@ st.markdown("""
 
 /* Buttons (match brand colors) */
 .stButton>button, .stDownloadButton>button {
-    background: linear-gradient(90deg, #FF8C00, #8E24AA);
-    color: #FFFFFF;
-    font-weight: 700;
-    border: none;
-    border-radius: 12px;
-    padding: 0.6rem 1rem;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+    background: linear-gradient(90deg, #FF8C00, #8E24AA) !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 0.6rem 1rem !important;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.15) !important;
 }
 .stButton>button:hover, .stDownloadButton>button:hover {
-    background: linear-gradient(90deg, #FFA733, #9C27B0);
+    background: linear-gradient(90deg, #FFA733, #9C27B0) !important;
 }
 
-/* Inputs not transparent */
+/* Inputs not transparent (including chat input) */
 [data-testid="stTextInputRoot"] input,
-textarea, select {
-    background: rgba(255,255,255,0.95) !important;
+textarea, select,
+[data-testid="stChatInput"] textarea {
+    background: rgba(255,255,255,0.98) !important;
     color: #000 !important;
     border-radius: 10px !important;
-}
-.stTextInput>div>div>input {
-    background: rgba(255,255,255,0.95) !important;
-    color: #000 !important;
+    border: 1px solid rgba(0,0,0,0.15) !important;
 }
 
 /* Chat message bubbles */
@@ -202,7 +190,6 @@ if st.session_state.page == "🏠 Home":
         """, unsafe_allow_html=True
     )
 
-    # Four friendly category cards
     st.markdown("""
     <div style='display:flex; gap:16px; margin-top:20px; flex-wrap:wrap;'>
         <div class='broad-card' style='flex:1; min-width:220px;'>
@@ -247,7 +234,6 @@ if st.session_state.page == "🏠 Home":
          "Yes—check out the Saint Lucia Folk Research Centre and local art galleries."),
     ]
 
-    # Controls for cycling
     col1, col2 = st.columns([1, 1])
     with col1:
         st.session_state.qa_cycle_enabled = st.toggle("🔁 Auto-cycle Q&A", value=st.session_state.qa_cycle_enabled)

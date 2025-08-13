@@ -7,7 +7,7 @@ import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 import random
-import time
+import time  # Added for cycling questions
 
 # ---------------------
 # Config / Load
@@ -141,7 +141,7 @@ if st.session_state.page == "🏠 Home":
     )
 
     # ---------------------
-    # Rotating sample Q&A
+    # Rotating sample Q&A (NEW CHANGE)
     # ---------------------
     sample_qa = [
         ("Where can I find the best beaches in Saint Lucia?", "Try Reduit Beach or Anse Chastanet for crystal clear water and soft sand!"),
@@ -151,9 +151,8 @@ if st.session_state.page == "🏠 Home":
         ("Are there museums to visit?", "Yes! The National Art Gallery and the Saint Lucia Folk Research Centre are great spots."),
     ]
 
-    placeholder = st.empty()  # This is the placeholder for cycling Q&A
+    placeholder = st.empty()
 
-    # Cycle through questions continuously
     def cycle_questions():
         while st.session_state.page == "🏠 Home":
             qa_sample = random.choice(sample_qa)

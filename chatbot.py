@@ -39,41 +39,36 @@ for df in [tourism_df, restaurant_df, cultural_df, edu_df]:
 # ---------------------
 # Session state defaults
 # ---------------------
-if "page" not in st.session_state: st.session_state.page = "Home"
-if "active_button" not in st.session_state: st.session_state.active_button = "Home"
+if "page" not in st.session_state: st.session_state.page = "🏠 Home"
+if "active_button" not in st.session_state: st.session_state.active_button = "🏠 Home"
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
 
 # ---------------------
-# Full-page gradient
+# Custom page styling
 # ---------------------
 page_bg_color = """
 <style>
-[data-testid="stAppViewContainer"] {
-    background: linear-gradient(to bottom, #FFA500 0%, #800080 100%);
-    background-attachment: fixed;
+body {
+    background: linear-gradient(to bottom, #FFA500, #800080);
     color: #fff;
-}
-[data-testid="stSidebar"] > div:first-child {
-    background: linear-gradient(to bottom, #FFA500 0%, #800080 100%);
 }
 .stButton>button {
-    background-color: #FFB733;
-    color: #fff;
-    font-weight: bold;
-    border-radius: 8px;
+    background: linear-gradient(90deg,#FFA500,#800080);
+    color: white;
+    border-radius: 10px;
+    height: 3em;
 }
 .stButton>button:hover {
-    background-color: #FF7F50;
-    color: #fff;
+    background: linear-gradient(90deg,#FFB733,#9B59B6);
+    color: white;
 }
-input, textarea {
-    background-color: #FFF !important;
-    color: #000 !important;
-    border-radius: 5px;
+.stTextInput>div>div>input {
+    background-color: rgba(255,255,255,0.9);
+    color: #000;
 }
-.chat-message {
-    background-color: #FFF !important;
+.st-chat-message-content {
+    background-color: rgba(255,255,255,0.9) !important;
     color: #000 !important;
 }
 </style>
@@ -84,7 +79,7 @@ st.markdown(page_bg_color, unsafe_allow_html=True)
 # Sidebar
 # ---------------------
 st.sidebar.title("🌴 BROAD ISLAND INTEL")
-pages = ["Home 🏠", "Itinerary Planner 📅", "Chatbot 💬"]
+pages = ["🏠 Home", "📅 Itinerary Planner", "💬 Chatbot"]
 for p in pages:
     if st.sidebar.button(p):
         st.session_state.page = p
@@ -92,40 +87,84 @@ for p in pages:
 
 st.sidebar.markdown(
     f"<div style='padding:6px 8px;border-radius:6px;font-weight:bold;color:white;"
-    f"background:linear-gradient(90deg,#FF6B6B,#FF4B4B);margin-top:8px'>"
+    f"background:linear-gradient(90deg,#FFA500,#800080);margin-top:8px'>"
     f"Active: {st.session_state.active_button}</div>",
     unsafe_allow_html=True
 )
 
 # ---------------------
-# Home Page
+# Page: Home
 # ---------------------
-if st.session_state.page.startswith("Home"):
-    st.title("🌴 BROAD ISLAND INTEL")
+if st.session_state.page == "🏠 Home":
+    st.markdown(
+        """
+        <div style='padding:30px; border-radius:15px; background: rgba(255,255,255,0.15);'>
+            <h1 style='text-align:center; color:#FFFFFF;'>🌴 Welcome to BROAD ISLAND INTEL 🌴</h1>
+            <p style='text-align:center; color:#FFF0C1; font-size:18px;'>
+                Your Saint Lucia guide for <span style="color:#FF9A00; font-weight:bold;">Tourism</span>, 
+                <span style="color:#D580FF; font-weight:bold;">Culture</span>, 
+                <span style="color:#FF9A00; font-weight:bold;">Education</span>, and <span style="color:#D580FF; font-weight:bold;">Cuisine</span>!  
+            </p>
+        </div>
+        """, unsafe_allow_html=True
+    )
+
     st.markdown("""
-    Welcome! BROAD ISLAND INTEL is your Saint Lucia cultural, tourism, and education guide.  
-    Explore top tourist sites, cultural landmarks, and restaurants.  
-    Plan your personalized itinerary.  
-    Chat with the AI assistant for quick recommendations.
-    """)
+    <div style='display:flex; gap:15px; margin-top:20px;'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+            <h3>🏖 Explore Tourism</h3>
+            <p>Discover top beaches, waterfalls, and scenic spots around Saint Lucia.</p>
+        </div>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+            <h3>🎭 Dive into Culture</h3>
+            <p>Learn about historical sites, traditions, and local festivals.</p>
+        </div>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+            <h3>🏫 Education</h3>
+            <p>Explore museums, libraries, and educational landmarks.</p>
+        </div>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+            <h3>🍴 Local Cuisine</h3>
+            <p>Find the best restaurants and authentic Saint Lucian dishes.</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.subheader("💡 Example Questions & Answers")
-    examples = [
-        ("What are the best beaches?", "Try Anse Chastanet, Reduit Beach, and Sugar Beach."),
-        ("Recommend a cultural landmark.", "Visit Pigeon Island National Park or the Soufriere Estate."),
-        ("Any good restaurants?", "Try The Coal Pot, Pink Plantation House, or Dasheene."),
-        ("Educational tours?", "Check out the Diamond Falls Botanical Gardens or Sulphur Springs.")
+    st.markdown(
+        """
+        <p style='margin-top:25px; color:#FFF0C1; font-size:16px;'>
+        Use the sidebar to navigate through pages, plan itineraries, or chat with our AI assistant for recommendations!  
+        🌞 Start your Saint Lucia adventure now! 🌴
+        </p>
+        """, unsafe_allow_html=True
+    )
+
+    # ---------------------
+    # Rotating sample Q&A
+    # ---------------------
+    sample_qa = [
+        ("Where can I find the best beaches in Saint Lucia?", "Try Reduit Beach or Anse Chastanet for crystal clear water and soft sand!"),
+        ("What is a must-see cultural landmark?", "The Derek Walcott Square in Castries is perfect for history and photo opportunities."),
+        ("Any recommendations for authentic Saint Lucian food?", "Don’t miss trying the national dish, Green Fig & Saltfish, at a local restaurant!"),
+        ("Where can I go hiking?", "The Tet Paul Nature Trail offers moderate hikes with stunning views of the Pitons."),
+        ("Are there museums to visit?", "Yes! The National Art Gallery and the Saint Lucia Folk Research Centre are great spots."),
     ]
-    example = random.choice(examples)
-    st.markdown(f"**Q:** {example[0]}  \n**A:** {example[1]}")
-
-    st.markdown("---")
-    st.markdown("**Page Overview:**  \nThis page provides a friendly introduction, sample questions, and highlights of Saint Lucia's tourism, culture, restaurants, and education.")
+    qa_sample = random.choice(sample_qa)
+    st.markdown(
+        f"""
+        <div style='margin-top:30px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
+            <h4 style='color:#FFD580;'>💡 Sample Question</h4>
+            <p style='color:#FFFFFF; font-weight:bold;'>{qa_sample[0]}</p>
+            <h4 style='color:#FFD580;'>🤖 Example Response</h4>
+            <p style='color:#FFF0C1;'>{qa_sample[1]}</p>
+        </div>
+        """, unsafe_allow_html=True
+    )
 
 # ---------------------
-# Itinerary Planner
+# Page: Itinerary Planner
 # ---------------------
-elif st.session_state.page.startswith("Itinerary"):
+elif st.session_state.page == "📅 Itinerary Planner":
     st.header("📅 Plan Your Itinerary")
     user_interests = st.text_input("Enter your interests (comma separated, e.g., beach, hiking, seafood, education):")
     combined_df = pd.concat([tourism_df, restaurant_df, cultural_df, edu_df], ignore_index=True)
@@ -162,7 +201,10 @@ elif st.session_state.page.startswith("Itinerary"):
             for _, r in map_df.iterrows():
                 folium.Marker(
                     location=[r["Latitude"], r["Longitude"]],
-                    popup=f"<b>{r.get('Name','Unknown')}</b><br>⭐ {r.get('Rating','N/A')}<br>{r.get('Type','N/A')}<br>💰 {r.get('Price','N/A')}",
+                    popup=f"<b>{r.get('Name','Unknown')}</b><br>"
+                          f"⭐ {r.get('Rating','N/A')}<br>"
+                          f"{r.get('Type','N/A')}<br>"
+                          f"💰 {r.get('Price','N/A')}",
                     tooltip=r.get('Name','Unknown'),
                     icon=folium.Icon(color=color_map.get(r["Source"],"gray"))
                 ).add_to(m)
@@ -193,32 +235,19 @@ Do not include greetings or sign-offs.
             except Exception as e:
                 st.error(f"AI error: {e}")
 
-    st.markdown("---")
-    st.markdown("**Page Overview:**  \nPlan your custom itinerary, view top locations, and generate AI-assisted suggestions.")
-
 # ---------------------
-# Chatbot
+# Page: Chatbot
 # ---------------------
-elif st.session_state.page.startswith("Chatbot"):
+elif st.session_state.page == "💬 Chatbot":
     st.header("💬 Chat with BROAD")
-    chat_area_style = """
-    <style>
-    .chat-message {
-        background-color: #FFF !important;
-        color: #000 !important;
-        padding: 6px;
-        border-radius: 6px;
-    }
-    </style>
-    """
-    st.markdown(chat_area_style, unsafe_allow_html=True)
-
     for msg in st.session_state.chat_messages:
-        role = "user" if msg["role"]=="user" else "assistant"
-        st.markdown(f"<div class='chat-message'><b>{role.title()}:</b> {msg['content']}</div>", unsafe_allow_html=True)
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
     if user_input := st.chat_input("Ask me about Saint Lucia..."):
         st.session_state.chat_messages.append({"role":"user","content":user_input})
+        with st.chat_message("user"):
+            st.markdown(user_input)
         with st.spinner("Thinking..."):
             try:
                 model = genai.GenerativeModel("gemini-2.0-flash")
@@ -229,7 +258,5 @@ elif st.session_state.page.startswith("Chatbot"):
             except Exception as e:
                 reply = f"⚠️ Error: {e}"
         st.session_state.chat_messages.append({"role":"assistant","content":reply})
-        st.markdown(f"<div class='chat-message'><b>Assistant:</b> {reply}</div>", unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("**Page Overview:**  \nChat with the AI assistant about Saint Lucia, ask questions, and get personalized recommendations.")
+        with st.chat_message("assistant"):
+            st.markdown(reply)

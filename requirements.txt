@@ -9,7 +9,7 @@ google-generativeai
 # Visualization
 plotly
 folium
-streamlit-folium==0.9.0
+streamlit-folium
 
 # Optional TTS
-gTTS==2.2.3
+gTTS

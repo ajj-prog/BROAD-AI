@@ -1,5 +1,4 @@
 streamlit
-google-generativeai
 dotenv
 os
 csv
@@ -8,3 +7,4 @@ plotly
 folium
 streamlit_folium
 gtts
+google-generativeai

@@ -4,8 +4,7 @@ pandas==1.5.3
 python-dotenv==1.0.0
 
 # Google Generative AI
-google
-# google-generativeai==0.1.0
+google-generativeai==0.1.0
 
 # Visualization
 plotly==5.3.1

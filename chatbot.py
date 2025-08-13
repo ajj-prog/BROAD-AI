@@ -44,22 +44,37 @@ if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
 
 # ---------------------
-# Apply full-page gradient background
+# Apply full-page vertical gradient background + sidebar styling
 # ---------------------
 st.markdown(
     """
     <style>
-    /* Full-page gradient background */
+    /* Full-page vertical gradient background */
     body, .stApp, .main {
-        background: linear-gradient(135deg, #FF7E5F, #8E2DE2);
+        background: linear-gradient(to bottom, #FFB347, #8E2DE2);
         background-attachment: fixed;
         color: #FFFFFF;
     }
+    /* Sidebar gradient matching page */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(to bottom, #FFB347, #8E2DE2);
+        color: white;
+    }
+    /* Highlighted boxes */
     .highlight {
         background-color: rgba(255, 255, 255, 0.15);
         padding: 10px;
         border-radius: 10px;
         margin-bottom: 10px;
+    }
+    /* Footer overview section */
+    .page-overview {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 20px;
+        font-style: italic;
+        color: #FFFFFF;
     }
     </style>
     """,
@@ -78,7 +93,7 @@ for p in pages:
 
 st.sidebar.markdown(
     f"<div style='padding:6px 8px;border-radius:6px;font-weight:bold;color:white;"
-    f"background:linear-gradient(90deg,#FF6B6B,#FF4B4B);margin-top:8px'>"
+    f"background:linear-gradient(90deg,#FF9A5A,#8E2DE2);margin-top:8px'>"
     f"Active: {st.session_state.active_button}</div>",
     unsafe_allow_html=True
 )
@@ -87,21 +102,17 @@ st.sidebar.markdown(
 # Page: Home
 # ---------------------
 if st.session_state.page == "Home":
-    st.markdown("<h1 style='color:#FFD700'>🌴 BROAD ISLAND INTEL</h1>", unsafe_allow_html=True)
+    st.title("🌴 BROAD ISLAND INTEL")
     st.markdown("""
-    <div class='highlight'>
-        Welcome to Saint Lucia's ultimate guide! BROAD ISLAND INTEL combines cultural, tourism, and education insights.
-    </div>
-    <div class='highlight'>
-        Explore top tourist sites, cultural landmarks, and must-try restaurants across the island.
-    </div>
-    <div class='highlight'>
-        Plan your personalized itinerary with our AI suggestions and interactive maps.
-    </div>
-    <div class='highlight'>
-        Chat with the AI assistant for quick recommendations or insider tips.
-    </div>
-    """, unsafe_allow_html=True)
+    Welcome! BROAD ISLAND INTEL is your Saint Lucia cultural, tourism, and education guide.  
+    - Explore top tourist sites, cultural landmarks, and restaurants.  
+    - Plan your personalized itinerary.  
+    - Chat with the AI assistant for quick recommendations.
+    """)
+    st.markdown(
+        "<div class='page-overview'>Home page: Start here to get a snapshot of all features, highlights, and quick links to planning, exploration, and chat.</div>",
+        unsafe_allow_html=True
+    )
 
 # ---------------------
 # Page: Itinerary Planner
@@ -121,21 +132,24 @@ elif st.session_state.page == "Itinerary Planner":
     if filtered_df.empty:
         st.warning("No matches found. Try different interests.")
     else:
+        # Sort by rating if numeric
         if "Rating" in filtered_df.columns:
             filtered_df["Rating"] = pd.to_numeric(filtered_df["Rating"], errors="coerce")
             filtered_df = filtered_df.sort_values(by="Rating", ascending=False)
 
+        # Display itinerary entries
         for source, group in filtered_df.groupby("Source"):
             header = "Where are you heading o_o" if source=="Tourism" else \
                      "Where to eat > <" if source=="Restaurant" else \
                      "Culture trip incoming 🎭" if source=="Cultural" else "Education stops 🏫"
             st.subheader(header)
             for _, r in group.iterrows():
-                st.markdown(f"**{r.get('Name','Unknown')}**  \n"
-                            f"⭐ {r.get('Rating','N/A')} — {r.get('Type','N/A')}  \n"
-                            f"📍 {r.get('Location','Unknown')}  \n"
-                            f"💰 {r.get('Price','N/A')}")
+                st.markdown(f"<div class='highlight'><b>{r.get('Name','Unknown')}</b><br>"
+                            f"⭐ {r.get('Rating','N/A')} — {r.get('Type','N/A')}<br>"
+                            f"📍 {r.get('Location','Unknown')}<br>"
+                            f"💰 {r.get('Price','N/A')}</div>", unsafe_allow_html=True)
 
+        # Interactive map
         map_df = filtered_df.dropna(subset=["Latitude","Longitude"]).copy()
         if not map_df.empty:
             m = folium.Map(location=[13.9094,-60.9789], zoom_start=10, tiles="OpenStreetMap")
@@ -152,6 +166,7 @@ elif st.session_state.page == "Itinerary Planner":
                 ).add_to(m)
             st_folium(m, width=700, height=500)
 
+        # Save itinerary CSV
         csv_data = filtered_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="💾 Save Itinerary as CSV",
@@ -160,22 +175,28 @@ elif st.session_state.page == "Itinerary Planner":
             mime="text/csv"
         )
 
+        # AI-generated itinerary
         if st.button("Generate AI itinerary"):
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            places_text = filtered_df.to_string(index=False)
-            prompt = f"""
+            try:
+                model = genai.GenerativeModel("gemini-2.0-flash")
+                places_text = filtered_df.to_string(index=False)
+                prompt = f"""
 Create a 1-day itinerary for Saint Lucia based on these interests: {user_interests}.
 Use only the following places (highest rated first if rating available):
 {places_text}
 Format the itinerary in morning, afternoon, evening blocks with short, engaging descriptions.
 Do not include greetings or sign-offs.
 """
-            try:
                 res = model.generate_content(prompt)
                 st.subheader("Your Suggested Itinerary")
                 st.write(res.text)
             except Exception as e:
                 st.error(f"AI error: {e}")
+
+    st.markdown(
+        "<div class='page-overview'>Itinerary Planner: Input your interests to generate personalized itineraries. View maps, save CSVs, or get AI recommendations.</div>",
+        unsafe_allow_html=True
+    )
 
 # ---------------------
 # Page: Chatbot
@@ -185,7 +206,6 @@ elif st.session_state.page == "Chatbot":
     for msg in st.session_state.chat_messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-
     if user_input := st.chat_input("Ask me about Saint Lucia..."):
         st.session_state.chat_messages.append({"role":"user","content":user_input})
         with st.chat_message("user"):
@@ -202,3 +222,8 @@ elif st.session_state.page == "Chatbot":
         st.session_state.chat_messages.append({"role":"assistant","content":reply})
         with st.chat_message("assistant"):
             st.markdown(reply)
+
+    st.markdown(
+        "<div class='page-overview'>Chatbot: Ask about Saint Lucia's culture, attractions, food, and education. Get conversational recommendations and insights from the AI assistant.</div>",
+        unsafe_allow_html=True
+    )

@@ -1,4 +1,4 @@
-csv
+pip install --upgrade pip
 
 # Core
 streamlit==1.48.1

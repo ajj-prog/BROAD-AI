@@ -27,18 +27,19 @@ st.markdown(
         padding: 10px;
     }
 
-    /* Styled sidebar buttons with emojis */
+    /* Styled sidebar buttons with matching gradient */
     .sidebar-button {
         display: block;
         width: 100%;
         margin-bottom: 10px;
-        padding: 8px;
-        border-radius: 8px;
+        padding: 10px;
+        border-radius: 10px;
         font-weight: bold;
         background: linear-gradient(to right, #FF9A00, #8E2DE2);
-        color: white;
+        color: white !important;
         text-align: center;
         cursor: pointer;
+        border: none;
     }
 
     /* Highlight boxes for Itinerary Planner entries */
@@ -134,7 +135,7 @@ st.sidebar.title("🌴 BROAD ISLAND INTEL")
 pages = ["Home", "Itinerary Planner", "Chatbot"]
 buttons = ["🏠 Home", "📅 Itinerary Planner", "💬 Chatbot"]
 for btn, p in zip(buttons, pages):
-    if st.sidebar.button(btn):
+    if st.sidebar.button(btn, key=btn):
         st.session_state.page = p
         st.session_state.active_button = p
 

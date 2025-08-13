@@ -1,6 +1,6 @@
 pip
 streamlit
-google.generativeai
+google-generativeai
 dotenv
 os
 csv

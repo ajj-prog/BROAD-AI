@@ -46,17 +46,7 @@ if "gemini_history" not in st.session_state: st.session_state.gemini_history = [
 # ---------------------
 # Sidebar
 # ---------------------
-st.sidebar.markdown(
-    f"""
-    <div style='padding:8px 12px; border-radius:8px;
-                background: linear-gradient(90deg,#002395,#FFD100);
-                color:white; font-weight:bold; text-align:center; margin-bottom:10px'>
-        🌴 BROAD ISLAND INTEL
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
+st.sidebar.title("BROAD ISLAND INTEL")
 pages = ["Home", "Itinerary Planner", "Chatbot"]
 for p in pages:
     if st.sidebar.button(p):
@@ -75,11 +65,9 @@ st.sidebar.markdown(
 # ---------------------
 if st.session_state.page == "Home":
     st.title("🌴 BROAD ISLAND INTEL")
-    st.image("https://upload.wikimedia.org/wikipedia/commons/3/33/Pitons,_Saint_Lucia.jpg",
-             use_column_width=True, caption="The Pitons, Saint Lucia")
     st.markdown("""
     Welcome! BROAD ISLAND INTEL is your Saint Lucia cultural, tourism, and education guide.  
-    - Explore top tourist sites, cultural landmarks, and restaurants. 🏝️🍴🎭🏫  
+    - Explore top tourist sites, cultural landmarks, and restaurants.  
     - Plan your personalized itinerary.  
     - Chat with the AI assistant for quick recommendations.
     """)
@@ -102,31 +90,30 @@ elif st.session_state.page == "Itinerary Planner":
     if filtered_df.empty:
         st.warning("No matches found. Try different interests.")
     else:
+        # Sort by rating if numeric
         if "Rating" in filtered_df.columns:
             filtered_df["Rating"] = pd.to_numeric(filtered_df["Rating"], errors="coerce")
             filtered_df = filtered_df.sort_values(by="Rating", ascending=False)
 
-        # Display itinerary entries with columns and emojis
+        # Display itinerary entries
         for source, group in filtered_df.groupby("Source"):
-            header = "Where are you heading 🏝️" if source=="Tourism" else \
-                     "Where to eat 🍴" if source=="Restaurant" else \
-                     "Culture trip 🎭" if source=="Cultural" else "Education stops 🏫"
+            header = "Where are you heading o_o" if source=="Tourism" else \
+                     "Where to eat > <" if source=="Restaurant" else \
+                     "Culture trip incoming 🎭" if source=="Cultural" else "Education stops 🏫"
             st.subheader(header)
             for _, r in group.iterrows():
-                col1, col2 = st.columns([1,3])
-                col1.image(r.get("ImageURL","https://via.placeholder.com/100"), width=100)
-                col2.markdown(f"**{r.get('Name','Unknown')}**  \n"
-                              f"⭐ {r.get('Rating','N/A')} — {r.get('Type','N/A')}  \n"
-                              f"📍 {r.get('Location','Unknown')}  \n"
-                              f"💰 {r.get('Price','N/A')}")
+                st.markdown(f"**{r.get('Name','Unknown')}**  \n"
+                            f"⭐ {r.get('Rating','N/A')} — {r.get('Type','N/A')}  \n"
+                            f"📍 {r.get('Location','Unknown')}  \n"
+                            f"💰 {r.get('Price','N/A')}")
 
         # ---------------------
         # Interactive map
         # ---------------------
         map_df = filtered_df.dropna(subset=["Latitude","Longitude"]).copy()
         if not map_df.empty:
-            m = folium.Map(location=[13.9094,-60.9789], zoom_start=10, tiles="Stamen Terrain")
-            color_map = {"Tourism":"cadetblue","Restaurant":"crimson","Cultural":"forestgreen","Education":"gold"}
+            m = folium.Map(location=[13.9094,-60.9789], zoom_start=10, tiles="OpenStreetMap")
+            color_map = {"Tourism":"blue","Restaurant":"red","Cultural":"green","Education":"purple"}
             for _, r in map_df.iterrows():
                 folium.Marker(
                     location=[r["Latitude"], r["Longitude"]],
@@ -154,16 +141,16 @@ elif st.session_state.page == "Itinerary Planner":
         # AI-generated itinerary
         # ---------------------
         if st.button("Generate AI itinerary"):
-            try:
-                model = genai.GenerativeModel("gemini-2.0-flash")
-                places_text = filtered_df.to_string(index=False)
-                prompt = f"""
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            places_text = filtered_df.to_string(index=False)
+            prompt = f"""
 Create a 1-day itinerary for Saint Lucia based on these interests: {user_interests}.
 Use only the following places (highest rated first if rating available):
 {places_text}
 Format the itinerary in morning, afternoon, evening blocks with short, engaging descriptions.
 Do not include greetings or sign-offs.
 """
+            try:
                 res = model.generate_content(prompt)
                 st.subheader("Your Suggested Itinerary")
                 st.write(res.text)
@@ -194,4 +181,4 @@ elif st.session_state.page == "Chatbot":
                 reply = f"⚠️ Error: {e}"
         st.session_state.chat_messages.append({"role":"assistant","content":reply})
         with st.chat_message("assistant"):
-            st.markdown(f"<div style='background-color:#002395;color:white;padding:8px;border-radius:10px'>{reply}</div>", unsafe_allow_html=True)
+            st.markdown(reply)

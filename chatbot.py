@@ -59,15 +59,27 @@ st.markdown(
     [data-testid="stSidebar"] {
         background: linear-gradient(to bottom, #FFB347, #8E2DE2);
         color: white;
+        padding: 10px;
     }
-    /* Highlighted boxes */
+    /* Styled sidebar buttons */
+    .sidebar-button {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 8px;
+        font-weight: bold;
+        background: linear-gradient(to right, #FF9A5A, #8E2DE2);
+        color: white;
+        text-align: center;
+        cursor: pointer;
+    }
     .highlight {
         background-color: rgba(255, 255, 255, 0.15);
         padding: 10px;
         border-radius: 10px;
         margin-bottom: 10px;
     }
-    /* Footer overview section */
     .page-overview {
         background-color: rgba(255, 255, 255, 0.1);
         padding: 12px;
@@ -82,12 +94,17 @@ st.markdown(
 )
 
 # ---------------------
-# Sidebar
+# Sidebar with emojis
 # ---------------------
-st.sidebar.title("BROAD ISLAND INTEL")
-pages = ["Home", "Itinerary Planner", "Chatbot"]
-for p in pages:
-    if st.sidebar.button(p):
+st.sidebar.title("🌴 BROAD ISLAND INTEL")
+page_buttons = {
+    "Home": "🏠 Home",
+    "Itinerary Planner": "📅 Itinerary Planner",
+    "Chatbot": "💬 Chatbot"
+}
+
+for p, label in page_buttons.items():
+    if st.sidebar.button(label, key=p, help=f"Go to {p} page"):
         st.session_state.page = p
         st.session_state.active_button = p
 
@@ -132,12 +149,10 @@ elif st.session_state.page == "Itinerary Planner":
     if filtered_df.empty:
         st.warning("No matches found. Try different interests.")
     else:
-        # Sort by rating if numeric
         if "Rating" in filtered_df.columns:
             filtered_df["Rating"] = pd.to_numeric(filtered_df["Rating"], errors="coerce")
             filtered_df = filtered_df.sort_values(by="Rating", ascending=False)
 
-        # Display itinerary entries
         for source, group in filtered_df.groupby("Source"):
             header = "Where are you heading o_o" if source=="Tourism" else \
                      "Where to eat > <" if source=="Restaurant" else \
@@ -149,7 +164,6 @@ elif st.session_state.page == "Itinerary Planner":
                             f"📍 {r.get('Location','Unknown')}<br>"
                             f"💰 {r.get('Price','N/A')}</div>", unsafe_allow_html=True)
 
-        # Interactive map
         map_df = filtered_df.dropna(subset=["Latitude","Longitude"]).copy()
         if not map_df.empty:
             m = folium.Map(location=[13.9094,-60.9789], zoom_start=10, tiles="OpenStreetMap")
@@ -166,7 +180,6 @@ elif st.session_state.page == "Itinerary Planner":
                 ).add_to(m)
             st_folium(m, width=700, height=500)
 
-        # Save itinerary CSV
         csv_data = filtered_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="💾 Save Itinerary as CSV",
@@ -175,7 +188,6 @@ elif st.session_state.page == "Itinerary Planner":
             mime="text/csv"
         )
 
-        # AI-generated itinerary
         if st.button("Generate AI itinerary"):
             try:
                 model = genai.GenerativeModel("gemini-2.0-flash")

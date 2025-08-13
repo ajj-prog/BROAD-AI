@@ -10,8 +10,9 @@ from streamlit_folium import st_folium
 # ---------------------
 # Config / Load
 # ---------------------
-load_dotenv()
-genai.configure(api_key=os.getenv("SECRET_KEY"))
+
+# Configure with Streamlit Secrets
+genai.configure(api_key=st.secrets["SECRET_KEY"])
 
 def clean_columns(df):
     df.columns = df.columns.str.strip().str.title()

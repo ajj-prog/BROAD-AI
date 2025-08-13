@@ -6,6 +6,7 @@ import os
 import plotly.express as px
 import folium
 from streamlit_folium import st_folium
+import random
 
 # ---------------------
 # Config / Load
@@ -28,7 +29,7 @@ restaurant_df['Source'] = "Restaurant"
 cultural_df['Source'] = "Cultural"
 edu_df['Source'] = "Education"
 
-# Fill missing columns safely
+# Fill missing columns and data safely
 for df in [tourism_df, restaurant_df, cultural_df, edu_df]:
     for col, default in [("Latitude", 0.0), ("Longitude", 0.0), ("Rating", "N/A"), ("Type", "N/A"), ("Price", "N/A")]:
         if col not in df.columns:
@@ -38,55 +39,46 @@ for df in [tourism_df, restaurant_df, cultural_df, edu_df]:
 # ---------------------
 # Session state defaults
 # ---------------------
-if "page" not in st.session_state: st.session_state.page = "Home"
-if "active_button" not in st.session_state: st.session_state.active_button = "Home"
+if "page" not in st.session_state: st.session_state.page = "🏠 Home"
+if "active_button" not in st.session_state: st.session_state.active_button = "🏠 Home"
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
 
 # ---------------------
-# Page & Sidebar Design
+# Custom page styling
 # ---------------------
-st.markdown(
-    """
-    <style>
-    /* Page gradient background */
-    .stApp {
-        background: linear-gradient(to bottom, #FFA500, #800080);
-        color: white;
-    }
-    /* Sidebar gradient */
-    .css-1d391kg {background: linear-gradient(to bottom, #FFA500, #800080);}
-    /* Buttons */
-    .stButton>button {
-        background: linear-gradient(90deg,#FFA500,#800080);
-        color:white;
-        font-weight:bold;
-    }
-    .stButton>button:hover {
-        background: linear-gradient(90deg,#FFB84D,#9933CC);
-        color:white;
-    }
-    /* Chat area background */
-    .stChatMessageStream {
-        background-color: white;
-        border-radius:10px;
-        padding:10px;
-    }
-    /* Text input / chat input */
-    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stChatInput>div>div>textarea {
-        background-color: white !important;
-        color:black !important;
-        border-radius:8px;
-        padding:5px;
-    }
-    </style>
-    """, unsafe_allow_html=True
-)
+page_bg_color = """
+<style>
+body {
+    background: linear-gradient(to bottom, #FFA500, #800080);
+    color: #fff;
+}
+.stButton>button {
+    background: linear-gradient(90deg,#FFA500,#800080);
+    color: white;
+    border-radius: 10px;
+    height: 3em;
+}
+.stButton>button:hover {
+    background: linear-gradient(90deg,#FFB733,#9B59B6);
+    color: white;
+}
+.stTextInput>div>div>input {
+    background-color: rgba(255,255,255,0.9);
+    color: #000;
+}
+.st-chat-message-content {
+    background-color: rgba(255,255,255,0.9) !important;
+    color: #000 !important;
+}
+</style>
+"""
+st.markdown(page_bg_color, unsafe_allow_html=True)
 
 # ---------------------
 # Sidebar
 # ---------------------
-st.sidebar.title("🌴 BROAD ISLAND INTEL 🌴")
+st.sidebar.title("🌴 BROAD ISLAND INTEL")
 pages = ["🏠 Home", "📅 Itinerary Planner", "💬 Chatbot"]
 for p in pages:
     if st.sidebar.button(p):
@@ -144,6 +136,28 @@ if st.session_state.page == "🏠 Home":
         Use the sidebar to navigate through pages, plan itineraries, or chat with our AI assistant for recommendations!  
         🌞 Start your Saint Lucia adventure now! 🌴
         </p>
+        """, unsafe_allow_html=True
+    )
+
+    # ---------------------
+    # Rotating sample Q&A
+    # ---------------------
+    sample_qa = [
+        ("Where can I find the best beaches in Saint Lucia?", "Try Reduit Beach or Anse Chastanet for crystal clear water and soft sand!"),
+        ("What is a must-see cultural landmark?", "The Derek Walcott Square in Castries is perfect for history and photo opportunities."),
+        ("Any recommendations for authentic Saint Lucian food?", "Don’t miss trying the national dish, Green Fig & Saltfish, at a local restaurant!"),
+        ("Where can I go hiking?", "The Tet Paul Nature Trail offers moderate hikes with stunning views of the Pitons."),
+        ("Are there museums to visit?", "Yes! The National Art Gallery and the Saint Lucia Folk Research Centre are great spots."),
+    ]
+    qa_sample = random.choice(sample_qa)
+    st.markdown(
+        f"""
+        <div style='margin-top:30px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
+            <h4 style='color:#FFD580;'>💡 Sample Question</h4>
+            <p style='color:#FFFFFF; font-weight:bold;'>{qa_sample[0]}</p>
+            <h4 style='color:#FFD580;'>🤖 Example Response</h4>
+            <p style='color:#FFF0C1;'>{qa_sample[1]}</p>
+        </div>
         """, unsafe_allow_html=True
     )
 

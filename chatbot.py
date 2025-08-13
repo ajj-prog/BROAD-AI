@@ -66,11 +66,18 @@ st.markdown(
         background: linear-gradient(90deg,#FFB84D,#9933CC);
         color:white;
     }
-    /* Chat area */
+    /* Chat area background */
     .stChatMessageStream {
-        background-color: rgba(255,255,255,0.1);
+        background-color: white;
         border-radius:10px;
         padding:10px;
+    }
+    /* Text input / chat input */
+    .stTextInput>div>div>input, .stTextArea>div>div>textarea, .stChatInput>div>div>textarea {
+        background-color: white !important;
+        color:black !important;
+        border-radius:8px;
+        padding:5px;
     }
     </style>
     """, unsafe_allow_html=True

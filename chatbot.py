@@ -1,17 +1,17 @@
 import streamlit as st
 import pandas as pd
-
 import google.generativeai as genai
+from dotenv import load_dotenv
+import os
 import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 
 # ---------------------
-# Configure Google Generative AI
+# Config / Load
 # ---------------------
-# Make sure you have added SECRET_KEY in Streamlit Cloud Secrets
-# Example in Secrets: SECRET_KEY="YOUR_ACTUAL_KEY_HERE"
-genai.configure(api_key=st.secrets["SECRET_KEY"])
+load_dotenv()
+genai.configure(api_key=os.getenv("SECRET_KEY"))
 
 # ---------------------
 # Load CSVs and clean columns

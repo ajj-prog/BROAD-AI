@@ -175,4 +175,12 @@ elif st.session_state.page == "Chatbot":
                     model = genai.GenerativeModel("gemini-2.0-flash")
                     chat = model.start_chat(history=st.session_state.gemini_history)
                     reply = chat.send_message(user_input).text
-                    st.session_state.gem_
+                    st.session_state.gemini_history.append({"role":"user","parts":[user_input]})
+                    st.session_state.gemini_history.append({"role":"model","parts":[reply]})
+                except Exception as e:
+                    reply = f"⚠️ AI Error: {e}"
+            else:
+                reply = "⚠️ AI assistant unavailable in this environment."
+        st.session_state.chat_messages.append({"role":"assistant","content":reply})
+        with st.chat_message("assistant"):
+            st.markdown(reply)

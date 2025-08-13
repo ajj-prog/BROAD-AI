@@ -9,7 +9,9 @@ from streamlit_folium import st_folium
 import random
 import time
 
-# --------------------- CONFIG / LOAD --------------------- #
+# ---------------------
+# Config / Load
+# ---------------------
 load_dotenv()
 genai.configure(api_key=os.getenv("SECRET_KEY"))
 
@@ -35,100 +37,82 @@ for df in [tourism_df, restaurant_df, cultural_df, edu_df]:
             df[col] = default
         df[col] = df[col].fillna(default)
 
-# --------------------- SESSION STATE --------------------- #
+# ---------------------
+# Session state defaults
+# ---------------------
 if "page" not in st.session_state: st.session_state.page = "🏠 Home"
 if "active_button" not in st.session_state: st.session_state.active_button = "🏠 Home"
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
 
-# --------------------- CUSTOM STYLES --------------------- #
-st.markdown("""
+# ---------------------
+# Custom page styling & loader
+# ---------------------
+page_bg_style = """
 <style>
-/* Gradient Background */
-.stApp {
+body {
     background: linear-gradient(to bottom, #FFA500, #800080);
-    color: white;
+    color: #fff;
 }
-
-/* Sidebar gradient */
-[data-testid="stSidebar"] {
-    background: linear-gradient(to bottom, #FFB84D, #993399);
-    color: white;
-}
-
-/* Buttons */
-div.stButton > button {
-    background-color: #FFB84D;
+.stButton>button {
+    background: linear-gradient(90deg,#FFA500,#800080);
     color: white;
     border-radius: 10px;
-    border: none;
-    padding: 0.6em 1em;
-    font-size: 1em;
-    font-weight: bold;
+    height: 3em;
 }
-div.stButton > button:hover {
-    background-color: #993399;
+.stButton>button:hover {
+    background: linear-gradient(90deg,#FFB733,#9B59B6);
+    color: white;
 }
-
-/* Chat area */
+.stTextInput>div>div>input {
+    background-color: rgba(255,255,255,0.95);
+    color: #000;
+}
 .st-chat-message-content {
-    background-color: white !important;
-    color: black !important;
-    border-radius: 10px !important;
-    padding: 0.5em !important;
+    background-color: rgba(255,255,255,0.95) !important;
+    color: #000 !important;
 }
-
-/* Text input solid white */
-textarea, input[type="text"], input[type="password"], input[type="email"], input[type="number"] {
-    background-color: white !important;
-    color: black !important;
-}
-
-/* Loader */
+/* Full-page loader */
 #loading-container {
     position: fixed;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background: linear-gradient(to bottom, #FFA500, #800080);
-    color: white;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 99999;
 }
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
+#loading-icon {
+    font-size: 60px;
+    animation: bob 1s infinite alternate;
 }
-.bounce {
-    display: inline-block;
-    animation: bounce 1s infinite;
-    font-size: 3em;
+@keyframes bob {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-20px); }
+}
+#loading-text {
+    color: white;
+    margin-top: 20px;
+    font-size: 24px;
 }
 </style>
-""", unsafe_allow_html=True)
+<div id="loading-container">
+    <div id="loading-icon">🌴</div>
+    <div id="loading-text">Just a minute ^^</div>
+</div>
+<script>
+setTimeout(function() {
+    var loader = document.getElementById('loading-container');
+    if (loader) { loader.style.display = 'none'; }
+}, 3000);
+</script>
+"""
+st.markdown(page_bg_style, unsafe_allow_html=True)
 
-# --------------------- LOADER --------------------- #
-def show_loader():
-    loader_html = """
-    <div id="loading-container">
-        <h1 style="font-size:3em; text-align:center;">🌴 BROAD ISLAND INTEL 🌴</h1>
-        <div style="margin: 20px;">
-            <span class="bounce">⏳</span>
-        </div>
-        <p style="font-size:1.5em;">Just a minute ^^</p>
-    </div>
-    <script>
-        setTimeout(function() {
-            var loader = document.getElementById('loading-container');
-            if (loader) { loader.style.display = 'none'; }
-        }, 3000);
-    </script>
-    """
-    st.markdown(loader_html, unsafe_allow_html=True)
-
-# --------------------- SIDEBAR --------------------- #
+# ---------------------
+# Sidebar
+# ---------------------
 st.sidebar.title("🌴 BROAD ISLAND INTEL")
 pages = ["🏠 Home", "📅 Itinerary Planner", "💬 Chatbot"]
 for p in pages:
@@ -143,10 +127,10 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# --------------------- HOME PAGE --------------------- #
+# ---------------------
+# Page: Home
+# ---------------------
 if st.session_state.page == "🏠 Home":
-    show_loader()
-
     st.markdown(
         """
         <div style='padding:30px; border-radius:15px; background: rgba(255,255,255,0.15);'>
@@ -161,20 +145,20 @@ if st.session_state.page == "🏠 Home":
     )
 
     st.markdown("""
-    <div style='display:flex; gap:15px; margin-top:20px; flex-wrap: wrap;'>
-        <div style='flex:1; min-width:200px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+    <div style='display:flex; gap:15px; margin-top:20px;'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
             <h3>🏖 Explore Tourism</h3>
             <p>Discover top beaches, waterfalls, and scenic spots around Saint Lucia.</p>
         </div>
-        <div style='flex:1; min-width:200px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
             <h3>🎭 Dive into Culture</h3>
             <p>Learn about historical sites, traditions, and local festivals.</p>
         </div>
-        <div style='flex:1; min-width:200px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
             <h3>🏫 Education</h3>
             <p>Explore museums, libraries, and educational landmarks.</p>
         </div>
-        <div style='flex:1; min-width:200px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
             <h3>🍴 Local Cuisine</h3>
             <p>Find the best restaurants and authentic Saint Lucian dishes.</p>
         </div>
@@ -190,7 +174,9 @@ if st.session_state.page == "🏠 Home":
         """, unsafe_allow_html=True
     )
 
+    # ---------------------
     # Rotating sample Q&A
+    # ---------------------
     sample_qa = [
         ("Where can I find the best beaches in Saint Lucia?", "Try Reduit Beach or Anse Chastanet for crystal clear water and soft sand!"),
         ("What is a must-see cultural landmark?", "The Derek Walcott Square in Castries is perfect for history and photo opportunities."),
@@ -198,23 +184,24 @@ if st.session_state.page == "🏠 Home":
         ("Where can I go hiking?", "The Tet Paul Nature Trail offers moderate hikes with stunning views of the Pitons."),
         ("Are there museums to visit?", "Yes! The National Art Gallery and the Saint Lucia Folk Research Centre are great spots."),
     ]
-    idx = int(time.time() // 3) % len(sample_qa)
-    question, answer = sample_qa[idx]
+
+    # Cycle questions every reload
+    qa_sample = random.choice(sample_qa)
     st.markdown(
         f"""
         <div style='margin-top:30px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
             <h4 style='color:#FFD580;'>💡 Sample Question</h4>
-            <p style='color:#FFFFFF; font-weight:bold;'>{question}</p>
+            <p style='color:#FFFFFF; font-weight:bold;'>{qa_sample[0]}</p>
             <h4 style='color:#FFD580;'>🤖 Example Response</h4>
-            <p style='color:#FFF0C1;'>{answer}</p>
+            <p style='color:#FFF0C1;'>{qa_sample[1]}</p>
         </div>
         """, unsafe_allow_html=True
     )
 
-# --------------------- ITINERARY PLANNER --------------------- #
+# ---------------------
+# Page: Itinerary Planner
+# ---------------------
 elif st.session_state.page == "📅 Itinerary Planner":
-    show_loader()
-
     st.header("📅 Plan Your Itinerary")
     user_interests = st.text_input("Enter your interests (comma separated, e.g., beach, hiking, seafood, education):")
     combined_df = pd.concat([tourism_df, restaurant_df, cultural_df, edu_df], ignore_index=True)
@@ -285,10 +272,10 @@ Do not include greetings or sign-offs.
             except Exception as e:
                 st.error(f"AI error: {e}")
 
-# --------------------- CHATBOT --------------------- #
+# ---------------------
+# Page: Chatbot
+# ---------------------
 elif st.session_state.page == "💬 Chatbot":
-    show_loader()
-
     st.header("💬 Chat with BROAD")
     for msg in st.session_state.chat_messages:
         with st.chat_message(msg["role"]):

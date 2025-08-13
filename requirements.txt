@@ -1,0 +1,10 @@
+streamlit
+google.generativeai
+dotenv
+os
+csv
+pandas
+plotly
+folium
+streamlit_folium
+gtts

@@ -7,6 +7,7 @@ import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 import random
+import time
 
 # ---------------------
 # Config / Load
@@ -45,17 +46,13 @@ if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
 
 # ---------------------
-# Full-page gradient and styles
+# Custom page styling
 # ---------------------
 page_bg_color = """
 <style>
-[data-testid="stAppViewContainer"] {
-    background: linear-gradient(to bottom, #FFA500 0%, #800080 100%);
-    background-attachment: fixed;
+body {
+    background: linear-gradient(to bottom, #FFA500, #800080);
     color: #fff;
-}
-[data-testid="stSidebar"] > div:first-child {
-    background: linear-gradient(to bottom, #FFA500 0%, #800080 100%);
 }
 .stButton>button {
     background: linear-gradient(90deg,#FFA500,#800080);
@@ -143,7 +140,9 @@ if st.session_state.page == "🏠 Home":
         """, unsafe_allow_html=True
     )
 
+    # ---------------------
     # Rotating sample Q&A
+    # ---------------------
     sample_qa = [
         ("Where can I find the best beaches in Saint Lucia?", "Try Reduit Beach or Anse Chastanet for crystal clear water and soft sand!"),
         ("What is a must-see cultural landmark?", "The Derek Walcott Square in Castries is perfect for history and photo opportunities."),
@@ -151,17 +150,26 @@ if st.session_state.page == "🏠 Home":
         ("Where can I go hiking?", "The Tet Paul Nature Trail offers moderate hikes with stunning views of the Pitons."),
         ("Are there museums to visit?", "Yes! The National Art Gallery and the Saint Lucia Folk Research Centre are great spots."),
     ]
-    qa_sample = random.choice(sample_qa)
-    st.markdown(
-        f"""
-        <div style='margin-top:30px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
-            <h4 style='color:#FFD580;'>💡 Sample Question</h4>
-            <p style='color:#FFFFFF; font-weight:bold;'>{qa_sample[0]}</p>
-            <h4 style='color:#FFD580;'>🤖 Example Response</h4>
-            <p style='color:#FFF0C1;'>{qa_sample[1]}</p>
-        </div>
-        """, unsafe_allow_html=True
-    )
+
+    placeholder = st.empty()  # This is the placeholder for cycling Q&A
+
+    # Cycle through questions continuously
+    def cycle_questions():
+        while st.session_state.page == "🏠 Home":
+            qa_sample = random.choice(sample_qa)
+            placeholder.markdown(
+                f"""
+                <div style='margin-top:30px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
+                    <h4 style='color:#FFD580;'>💡 Sample Question</h4>
+                    <p style='color:#FFFFFF; font-weight:bold;'>{qa_sample[0]}</p>
+                    <h4 style='color:#FFD580;'>🤖 Example Response</h4>
+                    <p style='color:#FFF0C1;'>{qa_sample[1]}</p>
+                </div>
+                """, unsafe_allow_html=True
+            )
+            time.sleep(5)
+
+    cycle_questions()
 
 # ---------------------
 # Page: Itinerary Planner

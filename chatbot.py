@@ -7,7 +7,7 @@ import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 import random
-import time  # for cycling questions
+import time
 
 # ---------------------
 # Config / Load
@@ -44,6 +44,34 @@ if "page" not in st.session_state: st.session_state.page = "🏠 Home"
 if "active_button" not in st.session_state: st.session_state.active_button = "🏠 Home"
 if "chat_messages" not in st.session_state: st.session_state.chat_messages = []
 if "gemini_history" not in st.session_state: st.session_state.gemini_history = []
+
+# ---------------------
+# Custom loading screen
+# ---------------------
+loading_placeholder = st.empty()
+loading_html = """
+<div style="display:flex; justify-content:center; align-items:center; height:100vh; background: linear-gradient(to bottom, #FFA500, #800080); color:white; flex-direction:column;">
+    <h1 style="font-size:3em;">🌴 BROAD ISLAND INTEL 🌴</h1>
+    <div style="font-size:3em; margin:20px;">
+        <span class="bounce">⏳</span>
+    </div>
+    <p style="font-size:1.5em;">Just a minute ^^</p>
+</div>
+
+<style>
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+.bounce {
+  display: inline-block;
+  animation: bounce 1s infinite;
+}
+</style>
+"""
+loading_placeholder.markdown(loading_html, unsafe_allow_html=True)
+time.sleep(3)  # simulate loading
+loading_placeholder.empty()
 
 # ---------------------
 # Custom page styling
@@ -111,20 +139,20 @@ if st.session_state.page == "🏠 Home":
     )
 
     st.markdown("""
-    <div style='display:flex; gap:15px; margin-top:20px; flex-wrap:wrap;'>
-        <div style='flex:1; min-width:220px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+    <div style='display:flex; gap:15px; margin-top:20px;'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
             <h3>🏖 Explore Tourism</h3>
             <p>Discover top beaches, waterfalls, and scenic spots around Saint Lucia.</p>
         </div>
-        <div style='flex:1; min-width:220px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
             <h3>🎭 Dive into Culture</h3>
             <p>Learn about historical sites, traditions, and local festivals.</p>
         </div>
-        <div style='flex:1; min-width:220px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
             <h3>🏫 Education</h3>
             <p>Explore museums, libraries, and educational landmarks.</p>
         </div>
-        <div style='flex:1; min-width:220px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
+        <div style='flex:1; padding:15px; border-radius:12px; background: rgba(255,255,255,0.15);'>
             <h3>🍴 Local Cuisine</h3>
             <p>Find the best restaurants and authentic Saint Lucian dishes.</p>
         </div>
@@ -150,25 +178,17 @@ if st.session_state.page == "🏠 Home":
         ("Where can I go hiking?", "The Tet Paul Nature Trail offers moderate hikes with stunning views of the Pitons."),
         ("Are there museums to visit?", "Yes! The National Art Gallery and the Saint Lucia Folk Research Centre are great spots."),
     ]
-
-    placeholder = st.empty()
-
-    def cycle_questions():
-        while st.session_state.page == "🏠 Home":
-            qa_sample = random.choice(sample_qa)
-            placeholder.markdown(
-                f"""
-                <div style='margin-top:30px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
-                    <h4 style='color:#FFD580;'>💡 Sample Question</h4>
-                    <p style='color:#FFFFFF; font-weight:bold;'>{qa_sample[0]}</p>
-                    <h4 style='color:#FFD580;'>🤖 Example Response</h4>
-                    <p style='color:#FFF0C1;'>{qa_sample[1]}</p>
-                </div>
-                """, unsafe_allow_html=True
-            )
-            time.sleep(5)
-
-    cycle_questions()
+    qa_sample = random.choice(sample_qa)
+    st.markdown(
+        f"""
+        <div style='margin-top:30px; padding:20px; border-radius:15px; background: rgba(255,255,255,0.25);'>
+            <h4 style='color:#FFD580;'>💡 Sample Question</h4>
+            <p style='color:#FFFFFF; font-weight:bold;'>{qa_sample[0]}</p>
+            <h4 style='color:#FFD580;'>🤖 Example Response</h4>
+            <p style='color:#FFF0C1;'>{qa_sample[1]}</p>
+        </div>
+        """, unsafe_allow_html=True
+    )
 
 # ---------------------
 # Page: Itinerary Planner

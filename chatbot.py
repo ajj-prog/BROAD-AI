@@ -148,3 +148,158 @@ st.markdown("""
 
 # --------------------- INTRO PAGE --------------------- #
 if st.session_state.page == "
+
+# --------------------- HOME PAGE --------------------- #
+elif st.session_state.page == "🏠 Home":
+    st.markdown("""
+    <style>
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+    .card { position:relative; padding:20px; border-radius:12px; background: rgba(255,255,255,0.15); color:#fff; text-decoration:none; border:1px solid #ffffff22; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,.18); transition: .15s; }
+    .hover { position:absolute; inset:0; opacity:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; background: rgba(11,19,43,.92); border-radius:12px; transition: opacity .15s; }
+    .card:hover .hover { opacity:1; }
+    </style>
+    <div class='grid'>
+      <div class='card'><div class='title'>📅 Itinerary Planner</div><div class='hover'>Filter places, build a plan, and save to your account.</div></div>
+      <div class='card'><div class='title'>🗂 Saved Itineraries</div><div class='hover'>Access, edit, and merge your saved plans.</div></div>
+      <div class='card'><div class='title'>💬 Chatbot</div><div class='hover'>Ask questions about Saint Lucia and get quick answers.</div></div>
+      <div class='card'><div class='title'>👤 Account</div><div class='hover'>Sign in to sync itineraries across sessions.</div></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# --------------------- ITINERARY PLANNER --------------------- #
+elif st.session_state.page == "📅 Itinerary Planner":
+    st.header("📅 Plan Your Itinerary")
+    user_interests = st.text_input("Enter your interests (comma separated):")
+    combined_df = pd.concat([tourism_df, restaurant_df, cultural_df, edu_df], ignore_index=True)
+
+    if user_interests:
+        keywords = [k.strip().lower() for k in user_interests.split(",")]
+        mask = combined_df.apply(lambda row: any(kw in str(row).lower() for kw in keywords), axis=1)
+        filtered_df = combined_df[mask]
+    else:
+        filtered_df = combined_df.copy()
+
+    if filtered_df.empty:
+        st.warning("No matches found. Try different interests.")
+    else:
+        filtered_df["Rating"] = clamp_rating(filtered_df["Rating"])
+        filtered_df["PriceNum"] = filtered_df["Price"].apply(parse_price)
+        filtered_df["PriceTier"] = filtered_df["PriceNum"].apply(price_tier)
+
+        for source, group in filtered_df.groupby("Source"):
+            st.subheader(f"{source} Picks")
+            for _, r in group.iterrows():
+                st.markdown(f"**{r['Name']}**  \n⭐ {r['Rating']} — {r['Type']}  \n📍 {r['Location']}  \n💰 {r['PriceTier']}")
+
+        map_df = filtered_df.dropna(subset=["Latitude","Longitude"]).copy()
+        if not map_df.empty:
+            m = folium.Map(location=[13.9094,-60.9789], zoom_start=10)
+            cluster = MarkerCluster().add_to(m)
+            color_map = {"Tourism":"blue","Restaurant":"red","Cultural":"green","Education":"purple"}
+            for _, r in map_df.iterrows():
+                folium.Marker(
+                    location=[r["Latitude"], r["Longitude"]],
+                    popup=f"<b>{r['Name']}</b><br>⭐ {r['Rating']}<br>{r['Type']}<br>💰 {r['PriceTier']}",
+                    tooltip=r['Name'],
+                    icon=folium.Icon(color=color_map.get(r["Source"],"gray"))
+                ).add_to(cluster)
+            st_folium(m, width=800, height=520)
+
+        if st.session_state.user:
+            if st.button("💾 Save to My Itineraries"):
+                itinerary = {
+                    "id": uuid.uuid4().hex[:8],
+                    "name": f"Plan {time.strftime('%Y-%m-%d %H:%M')}",
+                    "created_at": int(time.time()),
+                    "notes": "",
+                    "items": df_to_items(filtered_df),
+                }
+                save_itinerary(st.session_state.user["email"], itinerary)
+                st.success(f"Saved: {itinerary['name']}")
+        else:
+            st.info("Log in to save your itinerary.")
+
+        if st.button("🧠 Generate AI Itinerary"):
+            st.session_state.loading = True
+            try:
+                model = genai.GenerativeModel("gemini-2.0-pro")
+                places_text = filtered_df.to_string(index=False)
+                prompt = f"""Create a 1-day itinerary for Saint Lucia based on these interests: {user_interests}.
+Use only the following places (highest rated first):\n{places_text}
+Format in morning, afternoon, evening blocks with short, engaging descriptions."""
+                res = model.generate_content(prompt)
+                st.subheader("Suggested Itinerary")
+                st.write(res.text)
+            except Exception as e:
+                st.error(f"AI error: {e}")
+            st.session_state.loading = False
+
+        plan = build_trip_plan(filtered_df)
+        with st.expander("🧭 Trip Preparation"):
+            for step in plan["pretrip"]:
+                st.markdown(f"- **{step['title']}**: {step['details']}")
+        with st.expander("🗓 Day Plan"):
+            for step in plan["day"]:
+                st.markdown(f"- **{step['title']}**: {step['details']}")
+
+# --------------------- SAVED ITINERARIES --------------------- #
+elif st.session_state.page == "🗂 Saved Itineraries":
+    st.header("🗂 Saved Itineraries")
+    if not st.session_state.user:
+        st.info("Please log in to view your saved itineraries.")
+    else:
+        itins = list_itineraries(st.session_state.user["email"])
+        if not itins:
+            st.write("No itineraries yet.")
+        else:
+            names = [f"{i['name']} — {time.strftime('%Y-%m-%d', time.localtime(i['created_at']))}" for i in itins]
+            sel = st.selectbox("Select an itinerary", list(range(len(itins))), format_func=lambda i: names[i])
+            cur = itins[sel]
+            st.subheader(cur["name"])
+            st.write(f"Items: {len(cur['items'])}")
+            with st.expander("Preview items"):
+                st.dataframe(pd.DataFrame(cur["items"]))
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("🗑 Delete"):
+                    delete_itinerary(st.session_state.user["email"], cur["id"])
+                    st.experimental_rerun()
+            with col2:
+                other_idx = st.selectbox("Merge with", [i for i in range(len(itins)) if i != sel], format_func=lambda i: itins[i]["name"])
+            with col3:
+                new_name = st.text_input("Merged name", value=f"{cur['name']} + {itins[other_idx]['name']}")
+                if st.button("🔗 Merge"):
+                    merged = merge_itineraries(cur, itins[other_idx], new_name.strip() or None)
+                    save_itinerary(st.session_state.user["email"], merged)
+                    st.success(f"Merged and saved: {merged['name']}")
+
+# --------------------- CHATBOT --------------------- #
+elif st.session_state.page == "💬 Chatbot":
+    st.header("💬 Chat with BROAD")
+    for msg in st.session_state.chat_messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    if user_input := st.chat_input("Ask me about Saint Lucia..."):
+        st.session_state.chat_messages.append({"role":"user","content":user_input})
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        with st.spinner("Thinking..."):
+            try:
+                model = genai.GenerativeModel("gemini-2.0-pro")
+                chat = model.start_chat(history=st.session_state.gemini_history)
+                reply = chat.send_message(user_input).text
+                st.session_state.gemini_history.append({"role":"user","parts":[user_input]})
+                st.session_state.gemini_history.append({"role":"model","parts":[reply]})
+            except Exception as e:
+                reply = f"⚠️ Error: {e}"
+        st.session_state.chat_messages.append({"role":"assistant","content":reply})
+        with st.chat_message("assistant"):
+            st.markdown(reply)
+
+# --------------------- ACCOUNT PAGE --------------------- #
+elif st.session_state.page == "👤 Account":
+    st
+

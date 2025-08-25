@@ -7,6 +7,8 @@ import folium
 from folium.plugins import MarkerCluster
 from streamlit_folium import st_folium
 
+st.session_state.clear()
+
 # --------------------- CONFIG --------------------- #
 load_dotenv()
 genai.configure(api_key=os.getenv("SECRET_KEY"))

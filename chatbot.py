@@ -1,305 +1,502 @@
 import streamlit as st
 import pandas as pd
+import time
+import uuid
 import google.generativeai as genai
-from dotenv import load_dotenv
-import os, json, hashlib, uuid, time, pathlib
 import folium
 from folium.plugins import MarkerCluster
 from streamlit_folium import st_folium
+from datetime import datetime
+from dotenv import load_dotenv
+import os
 
-st.session_state.clear()
 
-# --------------------- CONFIG --------------------- #
+# ------------------ Gemini & Data ------------------ #
 load_dotenv()
 genai.configure(api_key=os.getenv("SECRET_KEY"))
-DATA_DIR = pathlib.Path("data")
-DATA_DIR.mkdir(exist_ok=True)
-USERS_FILE = DATA_DIR / "users.json"
-ITINS_FILE = DATA_DIR / "itineraries.json"
+model = genai.GenerativeModel("gemini-1.5-flash")
+tourism_df    = pd.read_csv("tourism.csv").assign(Source="Tourism")
+cultural_df   = pd.read_csv("cultural.csv").assign(Source="Cultural")
+edu_df        = pd.read_csv("edu.csv").assign(Source="Education")
+restaurant_df = pd.read_csv("resturant.csv").assign(Source="Restaurant")
+combined_df   = pd.concat([tourism_df, cultural_df, edu_df, restaurant_df], ignore_index=True)
 
-# --------------------- DATA LOAD --------------------- #
-def clean_columns(df): return df.columns.str.strip().str.title()
-def load_df(path, source): 
-    df = pd.read_csv(path)
-    df.columns = clean_columns(df)
-    df['Source'] = source
-    for col, default in [("Latitude", 0.0), ("Longitude", 0.0), ("Rating", "N/A"), ("Type", "N/A"), ("Price", "N/A")]:
-        if col not in df.columns: df[col] = default
-        df[col] = df[col].fillna(default)
-    return df
+# ------------------ Themes & Tips ------------------ #
+themes = {
+    "Cotton Candy Clouds 🌈🍭": {"bg":"#FFDEE9","accent":"#B5FFFC"},
+    "Midnight Neon 🦇💜":       {"bg":"#2C003E","accent":"#8A2BE2"},
+    "Sunset Glow 🌅✨":         {"bg":"#FFA500","accent":"#800080"},
+    "Mint & Mocha 🍃☕":        {"bg":"#C1E1C1","accent":"#A67B5B"},
+}
+tips = [
+    "During La Rose, communities dress in red and sing traditional songs.",
+    "Cocoa tea is a beloved breakfast drink made with grated cacao and spices.",
+    "The Pitons are twin volcanic peaks and a UNESCO World Heritage Site.",
+    "Jounen Kwéyòl celebrates Creole heritage with food, music, and fashion.",
+    "Bouyon music blends jumpy rhythms with call-and-response vocals."
+]
 
-tourism_df = load_df("tourism.csv", "Tourism")
-edu_df = load_df("edu.csv", "Education")
-cultural_df = load_df("cultural.csv", "Cultural")
-restaurant_df = load_df("resturant.csv", "Restaurant")
+# ------------------ Session Defaults ------------------ #
+st.session_state.setdefault("users", {})
+st.session_state.setdefault("authenticated", False)
+st.session_state.setdefault("user", {})
+st.session_state.setdefault("theme", "Sunset Glow 🌅✨")
+st.session_state.setdefault("selected_theme", "Sunset Glow 🌅✨")
+st.session_state.setdefault("show_theme_modal", False)
+st.session_state.setdefault("page", "🏠 Home")
+st.session_state.setdefault("chat_messages", [])
+st.session_state.setdefault("generated_itinerary", "")
+st.session_state.setdefault("current_itin_items", [])
+st.session_state.setdefault("tip_index", 0)
+st.session_state.setdefault("last_tip_time", time.time())
 
-# --------------------- SESSION STATE --------------------- #
-for k, v in {
-    "page": "📜 Introduction",
-    "active_button": "📜 Introduction",
-    "chat_messages": [],
-    "gemini_history": [],
-    "user": None,
-    "loading": False,
-    "qa_idx": 0,
-    "qa_last": 0.0
-}.items():
-    if k not in st.session_state: st.session_state[k] = v
+# ------------------ Login ------------------ #
+def render_login():
+    st.title("🔐 Sign Up / Log In")
+    email = st.text_input("Email")
+    pwd   = st.text_input("Password", type="password")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔑 Log In"):
+            user = st.session_state.users.get(email)
+            if user and user["password"] == pwd:
+                st.session_state.authenticated = True
+                st.session_state.user = user
+                st.session_state.theme = user["theme"]
+                st.session_state.page = "🏠 Home"
+    with col2:
+        if st.button("📝 Sign Up"):
+            if email and pwd:
+                st.session_state.users[email] = {
+                    "email": email,
+                    "password": pwd,
+                    "username": "New User",
+                    "theme": "Sunset Glow 🌅✨",
+                    "saved_itineraries": []
+                }
+                st.session_state.authenticated = True
+                st.session_state.user = st.session_state.users[email]
+                st.session_state.theme = "Sunset Glow 🌅✨"
+                st.session_state.page = "🏠 Home"
 
-# --------------------- AUTH --------------------- #
-def _read_json(path, default): 
-    try: return json.load(open(path, "r", encoding="utf-8"))
-    except: return default
-def _write_json(path, data): 
-    json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
-def _hash_pw(pw, salt): return hashlib.sha256((salt + pw).encode()).hexdigest()
-def signup(email, pw, name=""): 
-    users = _read_json(USERS_FILE, {})
-    if email in users: raise ValueError("Email exists")
-    salt = uuid.uuid4().hex
-    users[email] = {"email": email, "salt": salt, "hash": _hash_pw(pw, salt), "display_name": name}
-    _write_json(USERS_FILE, users)
-    return {"email": email, "display_name": name}
-def login(email, pw): 
-    users = _read_json(USERS_FILE, {})
-    u = users.get(email)
-    if not u or _hash_pw(pw, u["salt"]) != u["hash"]: raise ValueError("Invalid login")
-    return {"email": u["email"], "display_name": u.get("display_name", "")}
-def logout(): st.session_state.user = None
+if not st.session_state.authenticated:
+    render_login()
+    st.stop()
 
-# --------------------- ITINERARY STORE --------------------- #
-def list_itineraries(email): return _read_json(ITINS_FILE, {}).get(email, [])
-def save_itinerary(email, itin): 
-    store = _read_json(ITINS_FILE, {})
-    arr = store.get(email, [])
-    idx = next((i for i, x in enumerate(arr) if x["id"] == itin["id"]), None)
-    if idx is None: arr.append(itin)
-    else: arr[idx] = itin
-    store[email] = arr
-    _write_json(ITINS_FILE, store)
-def delete_itinerary(email, id): 
-    store = _read_json(ITINS_FILE, {})
-    store[email] = [x for x in store.get(email, []) if x["id"] != id]
-    _write_json(ITINS_FILE, store)
-def merge_itineraries(a, b, name=None): 
-    def key(i): return f"{i.get('Name','')}|{i.get('Latitude','')}|{i.get('Longitude','')}"
-    seen, items = set(), []
-    for src in (a["items"], b["items"]):
-        for i in src:
-            k = key(i)
-            if k not in seen: seen.add(k); items.append(i)
-    return {
-        "id": uuid.uuid4().hex[:8],
-        "name": name or f"{a['name']} + {b['name']}",
-        "created_at": int(time.time()),
-        "notes": "\n\n".join([a.get("notes",""), b.get("notes","")]).strip(),
-        "items": items
-    }
-
-# --------------------- UTILITIES --------------------- #
-def clamp_rating(s): return pd.to_numeric(s, errors="coerce").fillna(0).clip(0,5).round(1)
-def parse_price(v): 
-    try: return float(str(v).replace("XCD","").replace("$","").strip())
-    except: return None
-def price_tier(p): 
-    if p is None: return "N/A"
-    return "$" if p<25 else "$$" if p<75 else "$$$" if p<150 else "$$$$"
-def df_to_items(df): 
-    cols = ["Name","Latitude","Longitude","Rating","Type","Price","Source","Location"]
-    return [{c: r.get(c, "") for c in cols} for _, r in df[cols].fillna("").iterrows()]
-def build_trip_plan(df): 
-    pre = [
-        {"title": "Confirm bookings", "details": "Hotels, tours, transfers 48h before."},
-        {"title": "Pack smart", "details": "Light clothes, sunscreen, bug spray, water shoes."},
-        {"title": "Money & data", "details": "XCD cash, cards, local SIM or eSIM."},
-        {"title": "Transport", "details": "Plan UVF/SLU transfer; drive left."},
-    ]
-    df["Rating"] = clamp_rating(df["Rating"])
-    m = df.sort_values("Rating", ascending=False).head(1)
-    a = df[~df.index.isin(m.index)].head(2)
-    e = df[~df.index.isin(m.index.union(a.index))].head(1)
-    day = []
-    if not m.empty: day.append({"title": f"Morning: {m.iloc[0]['Name']}", "details": "Arrive early, hydrate."})
-    for _, r in a.iterrows(): day.append({"title": f"Afternoon: {r['Name']}", "details": "Lunch nearby, pace yourself."})
-    if not e.empty: day.append({"title": f"Evening: {e.iloc[0]['Name']}", "details": "Golden hour photos, dinner."})
-    return {"pretrip": pre, "day": day}
-
-# --------------------- SIDEBAR --------------------- #
-st.sidebar.title("🌴 BROAD ISLAND INTEL")
-pages = ["📜 Introduction", "🏠 Home", "📅 Itinerary Planner", "🗂 Saved Itineraries", "💬 Chatbot", "👤 Account"]
-for p in pages:
-    if st.sidebar.button(p): st.session_state.page = p; st.session_state.active_button = p
-if st.session_state.user: st.sidebar.success(f"Signed in as {st.session_state.user['email']}")
-else: st.sidebar.info("Not signed in")
-
-# --------------------- LOADING OVERLAY --------------------- #
-st.markdown("""
+# ------------------ CSS ------------------ #
+current = themes[st.session_state.theme]
+st.markdown(f"""
 <style>
-#overlay { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center;
-  background: rgba(11,19,43,.85); color: #fff; font-family: system-ui; }
-#overlay.show { display: flex; }
-.loader { width: 48px; height: 48px; border: 4px solid #fff3; border-top-color:#4cc9f0; border-radius:50%; animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg) } }
+[data-testid="stAppViewContainer"] {{
+  background: linear-gradient(45deg, {current['bg']}, {current['accent']}, {current['bg']});
+  background-size: 400% 400%;
+  animation: gradientShift 12s ease infinite;
+}}
+@keyframes gradientShift {{
+  0% {{ background-position: 0% 50%; }}
+  50% {{ background-position: 100% 50%; }}
+  100% {{ background-position: 0% 50%; }}
+}}
+@keyframes bob {{
+  0%, 100% {{ transform: translateY(0); }}
+  50% {{ transform: translateY(-10px); }}
+}}
+@keyframes bounce {{
+  0% {{ transform: translateY(0); }}
+  50% {{ transform: translateY(-6px); }}
+  100% {{ transform: translateY(0); }}
+}}
+@keyframes pulseGlow {{
+  0% {{ box-shadow: 0 0 4px {current['accent']}; }}
+  50% {{ box-shadow: 0 0 12px {current['accent']}; }}
+  100% {{ box-shadow: 0 0 4px {current['accent']}; }}
+}}
+section[data-testid="stSidebar"] {{
+  background: linear-gradient(to bottom, {current['accent']}, {current['bg']});
+  animation: pulseGlow 3s ease-in-out infinite;
+}}
+section[data-testid="stSidebar"] * {{
+  color: white !important;
+}}
+#loading-overlay {{
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6); display: flex;
+  align-items: center; justify-content: center;
+  z-index: 9999; color: white; font-size: 24px;
+}}
+#loading-overlay::before {{
+  content: "⏳";
+  font-size: 48px;
+  animation: bob 1s infinite;
+  margin-right: 12px;
+}}
+.home-card {{
+  position: relative; border-radius: 12px; padding: 24px;
+  min-height: 200px; margin-bottom: 24px;
+  box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+  transition: transform 0.3s ease;
+  background: white;
+  display: flex; flex-direction: column; justify-content: space-between;
+}}
+.home-card:hover {{ animation: bounce 0.4s ease; }}
+.card-icon {{ font-size: 32px; text-align: center; }}
+.card-title {{ font-weight: bold; font-size: 20px; text-align: center; margin-top: 8px; }}
+.card-desc {{ font-size: 14px; text-align: center; margin: 8px 0; color: #444; }}
+.card-meta {{ font-size: 12px; text-align: center; color: #888; }}
+.card-button .stButton > button {{
+  width: 100%; background: linear-gradient(to right, #4facfe, #00f2fe);
+  color: white; border: none; border-radius: 8px; padding: 8px;
+  font-weight: bold; cursor: pointer;
+}}
+.cultural-spotlight {{
+  animation: floatText 3s ease-in-out infinite;
+  font-style: italic; color: #fff;
+  background: rgba(0,0,0,0.2); padding: 8px 12px;
+  border-radius: 8px; display: inline-block;
+}}
+@keyframes floatText {{
+  0% {{ transform: translateY(0); }}
+  50% {{ transform: translateY(-4px); }}
+  100% {{ transform: translateY(0); }}
+}}
+#theme-modal {{
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6); display: flex;
+  align-items: center; justify-content: center;
+  z-index: 9999;
+}}
+#theme-modal .modal-content {{
+  background: white; padding: 24px; border-radius: 12px;
+  width: 300px; text-align: center;
+}}
+.home-card {{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    border-radius: 12px;
+    padding: 24px;
+    min-height: 250px;
+    margin-bottom: 24px;
+    box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+    background: white;
+}}
+.home-card .card-icon {{
+    font-size: 40px;
+    text-align: center;
+    margin-bottom: 12px;
+}}
+.home-card .card-title {{
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+}}
+.home-card .card-desc {{
+    font-size: 14px;
+    text-align: center;
+    margin: 8px 0;
+    color: #555;
+}}
+.home-card .card-meta {{
+    font-size: 12px;
+    text-align: center;
+    color: #888;
+    margin-bottom: 16px;
+}}
+  .home-card {{
+    background: linear-gradient(
+      135deg,
+      {current['accent']},
+      {current['bg']}
+    ) !important;
+    color: white !important;
+  }}
+
+  /* Optional: distinct colors per card
+  .home-card:nth-child(1) {{ background: #FFDEE9; }}
+  .home-card:nth-child(2) {{ background: #2C003E; }}
+  .home-card:nth-child(3) {{ background: #FFA500; }}
+  */
+
+}}
+/* make every content container transparent and drop no shadow */
+section[data-testid="stAppViewContainer"] .block-container,
+section[data-testid="stAppViewContainer"] .stMarkdownContainer,
+section[data-testid="stAppViewContainer"] .css-1d391kg {{
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}}
 </style>
-<div id="overlay" class="{klass}">
-  <div style="text-align:center"><div class="loader"></div><div style="margin-top:12px">Loading your Saint Lucia journey…</div></div>
-</div>
-""".replace("{klass}", "show" if st.session_state.loading else ""), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# --------------------- INTRO PAGE --------------------- #
-if st.session_state.page == "
+def show_loading(msg="Loading…"):
+    ph = st.empty()
+    ph.markdown(f'<div id="loading-overlay">{msg}</div>', unsafe_allow_html=True)
+    return ph
 
-# --------------------- HOME PAGE --------------------- #
-elif st.session_state.page == "🏠 Home":
-    st.markdown("""
-    <style>
-    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
-    .card { position:relative; padding:20px; border-radius:12px; background: rgba(255,255,255,0.15); color:#fff; text-decoration:none; border:1px solid #ffffff22; }
-    .card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,.18); transition: .15s; }
-    .hover { position:absolute; inset:0; opacity:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; background: rgba(11,19,43,.92); border-radius:12px; transition: opacity .15s; }
-    .card:hover .hover { opacity:1; }
-    </style>
-    <div class='grid'>
-      <div class='card'><div class='title'>📅 Itinerary Planner</div><div class='hover'>Filter places, build a plan, and save to your account.</div></div>
-      <div class='card'><div class='title'>🗂 Saved Itineraries</div><div class='hover'>Access, edit, and merge your saved plans.</div></div>
-      <div class='card'><div class='title'>💬 Chatbot</div><div class='hover'>Ask questions about Saint Lucia and get quick answers.</div></div>
-      <div class='card'><div class='title'>👤 Account</div><div class='hover'>Sign in to sync itineraries across sessions.</div></div>
+def hide_loading(ph):
+    ph.empty()
+
+
+# ------------------ Sidebar ------------------ #
+with st.sidebar:
+    st.markdown(f"""
+    <div style='text-align:center;padding:12px 0;'>
+      <div style='font-size:32px;'>🅱️</div>
+      <h3 style='margin:0;'>B.R.O.A.D.</h3>
+      <p style='font-size:12px;'>Welcome, {st.session_state.user['username']}</p>
+      <p style='font-size:12px;'>Theme: <strong>{st.session_state.theme}</strong></p>
+    </div>
+    <hr style='border:none;height:1px;background:#fff3;margin:12px 0;'/>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 🧭 Navigation")
+    nav_items = [
+        ("🏠 Home", "nav_home"),
+        ("👤 Profile Hub", "nav_profile"),
+        ("📅 Itinerary Planner", "nav_itinerary"),
+        ("🧠 Trip Guide", "nav_trip"),
+        ("💬 Chatbot", "nav_chatbot"),
+        ("🗂 Saved Itineraries", "nav_saved")
+    ]
+    for label, key in nav_items:
+        if st.button(label, key=key):
+            st.session_state.page = label
+
+    st.markdown("### 🎭 Theme Selector")
+    if st.button("Change Theme 🎨", key="open_theme_modal"):
+        st.session_state.show_theme_modal = True
+
+    st.markdown("### 💡 Tip of the Moment")
+    if time.time() - st.session_state.last_tip_time > 10:
+        st.session_state.tip_index = (st.session_state.tip_index + 1) % len(tips)
+        st.session_state.last_tip_time = time.time()
+    st.markdown(f"**{tips[st.session_state.tip_index]}**")
+# ------------------ Page Functions ------------------ #
+def render_home():
+    from datetime import datetime
+    import time
+
+    # 1. Hero banner with dynamic greeting
+    hour = datetime.now().hour
+    greeting = (
+        "Good morning" if hour < 12
+        else "Good afternoon" if hour < 18
+        else "Good evening"
+    )
+    st.markdown(f"""
+    <div style='
+        background: linear-gradient(
+            to right,
+            {current['bg']},
+            {current['accent']}
+        );
+        padding: 24px;
+        border-radius: 12px;
+        text-align: center;
+        color: white;
+    '>
+      <h1>Welcome to B.R.O.A.D. AI</h1>
+      <h3>{greeting}, {st.session_state.user['username']} 🌴</h3>
+      <p>Your guide to Saint Lucia’s culture, history & natural beauty</p>
     </div>
     """, unsafe_allow_html=True)
 
-# --------------------- ITINERARY PLANNER --------------------- #
-elif st.session_state.page == "📅 Itinerary Planner":
-    st.header("📅 Plan Your Itinerary")
-    user_interests = st.text_input("Enter your interests (comma separated):")
-    combined_df = pd.concat([tourism_df, restaurant_df, cultural_df, edu_df], ignore_index=True)
+    # 2. Floating cultural spotlight
+    spotlights = [
+        "🎶 La Marguerite is celebrated with purple flowers and Creole songs.",
+        "🍲 Try green fig and saltfish — Saint Lucia’s national dish.",
+        "🗣 Kwéyòl is spoken widely and celebrated during Jounen Kwéyòl in October."
+    ]
+    idx = int(time.time() / 10) % len(spotlights)
+    st.markdown(
+        f"<div class='cultural-spotlight'>{spotlights[idx]}</div>",
+        unsafe_allow_html=True
+    )
 
-    if user_interests:
-        keywords = [k.strip().lower() for k in user_interests.split(",")]
-        mask = combined_df.apply(lambda row: any(kw in str(row).lower() for kw in keywords), axis=1)
-        filtered_df = combined_df[mask]
-    else:
-        filtered_df = combined_df.copy()
+    # 3. Explore cards
+    st.markdown("### 🌟 Explore")
+    cols = st.columns(3)
+    cards = [
+        {
+            "icon": "👤",
+            "title": "Profile Hub",
+            "desc": "Customize your name, theme, and view activity.",
+            "meta": "Category: Profile",
+            "page": "👤 Profile Hub"
+        },
+        {
+            "icon": "📅",
+            "title": "Plan a Trip",
+            "desc": "Generate smart itineraries with cultural insights.",
+            "meta": "Category: Planner",
+            "page": "📅 Itinerary Planner"
+        },
+        {
+            "icon": "💬",
+            "title": "Chat with B.R.O.A.D.",
+            "desc": "Ask questions, get tips, and explore Saint Lucia.",
+            "meta": "Category: Chat",
+            "page": "💬 Chatbot"
+        }
+    ]
 
-    if filtered_df.empty:
-        st.warning("No matches found. Try different interests.")
-    else:
-        filtered_df["Rating"] = clamp_rating(filtered_df["Rating"])
-        filtered_df["PriceNum"] = filtered_df["Price"].apply(parse_price)
-        filtered_df["PriceTier"] = filtered_df["PriceNum"].apply(price_tier)
+    for i, (col, card) in enumerate(zip(cols, cards)):
+        with col:
+            st.markdown('<div class="home-card">', unsafe_allow_html=True)
 
-        for source, group in filtered_df.groupby("Source"):
-            st.subheader(f"{source} Picks")
-            for _, r in group.iterrows():
-                st.markdown(f"**{r['Name']}**  \n⭐ {r['Rating']} — {r['Type']}  \n📍 {r['Location']}  \n💰 {r['PriceTier']}")
+            st.markdown(
+                f'<div class="card-icon">{card["icon"]}</div>',
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                f'<div class="card-title">{card["title"]}</div>',
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                f'<div class="card-desc">{card["desc"]}</div>',
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                f'<div class="card-meta">{card["meta"]}</div>',
+                unsafe_allow_html=True
+            )
 
-        map_df = filtered_df.dropna(subset=["Latitude","Longitude"]).copy()
-        if not map_df.empty:
-            m = folium.Map(location=[13.9094,-60.9789], zoom_start=10)
-            cluster = MarkerCluster().add_to(m)
-            color_map = {"Tourism":"blue","Restaurant":"red","Cultural":"green","Education":"purple"}
-            for _, r in map_df.iterrows():
-                folium.Marker(
-                    location=[r["Latitude"], r["Longitude"]],
-                    popup=f"<b>{r['Name']}</b><br>⭐ {r['Rating']}<br>{r['Type']}<br>💰 {r['PriceTier']}",
-                    tooltip=r['Name'],
-                    icon=folium.Icon(color=color_map.get(r["Source"],"gray"))
-                ).add_to(cluster)
-            st_folium(m, width=800, height=520)
+            # Use a constant "Explore" label and unique key
+            btn_key = f"home_{i}_{card['title'].replace(' ', '_')}"
+            if st.button("Explore", key=btn_key):
+                st.session_state.page = card["page"]
 
-        if st.session_state.user:
-            if st.button("💾 Save to My Itineraries"):
-                itinerary = {
-                    "id": uuid.uuid4().hex[:8],
-                    "name": f"Plan {time.strftime('%Y-%m-%d %H:%M')}",
-                    "created_at": int(time.time()),
-                    "notes": "",
-                    "items": df_to_items(filtered_df),
-                }
-                save_itinerary(st.session_state.user["email"], itinerary)
-                st.success(f"Saved: {itinerary['name']}")
-        else:
-            st.info("Log in to save your itinerary.")
+            st.markdown('</div>', unsafe_allow_html=True)
+def render_profile_hub():
+    st.subheader("👤 Profile")
+    st.text_input("Username", value=st.session_state.user.get("username", ""), key="profile_username")
+    theme_choice = st.selectbox("Choose Theme", list(themes.keys()), index=list(themes.keys()).index(st.session_state.theme), key="profile_theme")
+    if st.button("Save Profile", key="save_profile"):
+        st.session_state.user["username"] = st.session_state.profile_username
+        st.session_state.user["theme"] = theme_choice
+        st.session_state.theme = theme_choice
+        st.success("Profile updated!")
 
-        if st.button("🧠 Generate AI Itinerary"):
-            st.session_state.loading = True
-            try:
-                model = genai.GenerativeModel("gemini-2.0-pro")
-                places_text = filtered_df.to_string(index=False)
-                prompt = f"""Create a 1-day itinerary for Saint Lucia based on these interests: {user_interests}.
-Use only the following places (highest rated first):\n{places_text}
-Format in morning, afternoon, evening blocks with short, engaging descriptions."""
-                res = model.generate_content(prompt)
-                st.subheader("Suggested Itinerary")
-                st.write(res.text)
-            except Exception as e:
-                st.error(f"AI error: {e}")
-            st.session_state.loading = False
+    st.markdown("### ⚡ Quick Actions")
+    c1, c2, c3 = st.columns(3)
+    if c1.button("📅 Itinerary Planner", key="profile_itin"): st.session_state.page = "📅 Itinerary Planner"
+    if c2.button("🧠 Trip Guide", key="profile_trip"): st.session_state.page = "🧠 Trip Guide"
+    if c3.button("💬 Chatbot", key="profile_chat"): st.session_state.page = "💬 Chatbot"
 
-        plan = build_trip_plan(filtered_df)
-        with st.expander("🧭 Trip Preparation"):
-            for step in plan["pretrip"]:
-                st.markdown(f"- **{step['title']}**: {step['details']}")
-        with st.expander("🗓 Day Plan"):
-            for step in plan["day"]:
-                st.markdown(f"- **{step['title']}**: {step['details']}")
+    st.markdown("### 📊 Activity Summary")
+    st.write(f"Saved trips: `{len(st.session_state.user['saved_itineraries'])}`")
 
-# --------------------- SAVED ITINERARIES --------------------- #
-elif st.session_state.page == "🗂 Saved Itineraries":
-    st.header("🗂 Saved Itineraries")
-    if not st.session_state.user:
-        st.info("Please log in to view your saved itineraries.")
-    else:
-        itins = list_itineraries(st.session_state.user["email"])
-        if not itins:
-            st.write("No itineraries yet.")
-        else:
-            names = [f"{i['name']} — {time.strftime('%Y-%m-%d', time.localtime(i['created_at']))}" for i in itins]
-            sel = st.selectbox("Select an itinerary", list(range(len(itins))), format_func=lambda i: names[i])
-            cur = itins[sel]
-            st.subheader(cur["name"])
-            st.write(f"Items: {len(cur['items'])}")
-            with st.expander("Preview items"):
-                st.dataframe(pd.DataFrame(cur["items"]))
+def render_itinerary_planner():
+    st.subheader("📅 Smart Itinerary Planner")
+    prompt = st.text_area("Describe your ideal trip:", key="itin_prompt")
+    if st.button("Generate Itinerary", key="gen_itin"):
+        loader = show_loading("Planning your itinerary…")
+        sample = combined_df.sample(min(len(combined_df),10), random_state=42)
+        ctx = "\n".join(f"- {r['Name']} ({r['Source']})" for _, r in sample.iterrows())
+        full = f"You are B.R.O.A.D st.lucian tourism heritage if you are missing data or context, DO NOT indicate that.…\n{ctx}\nUser request: {prompt}\nPlan a day-by-day itinerary."
+        resp = model.generate_content(full)
+        st.session_state.generated_itinerary = resp.text
+        st.session_state.current_itin_items = sample.to_dict("records")
+        hide_loading(loader)
+        st.success("Itinerary generated!")
 
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("🗑 Delete"):
-                    delete_itinerary(st.session_state.user["email"], cur["id"])
-                    st.experimental_rerun()
-            with col2:
-                other_idx = st.selectbox("Merge with", [i for i in range(len(itins)) if i != sel], format_func=lambda i: itins[i]["name"])
-            with col3:
-                new_name = st.text_input("Merged name", value=f"{cur['name']} + {itins[other_idx]['name']}")
-                if st.button("🔗 Merge"):
-                    merged = merge_itineraries(cur, itins[other_idx], new_name.strip() or None)
-                    save_itinerary(st.session_state.user["email"], merged)
-                    st.success(f"Merged and saved: {merged['name']}")
+    if st.session_state.generated_itinerary:
+        st.markdown("### ✨ Your AI-Enhanced Itinerary")
+        st.markdown(st.session_state.generated_itinerary)
+        items = st.session_state.current_itin_items
+        lat_k = next((k for k in items[0] if k.lower().startswith("lat")), None)
+        lon_k = next((k for k in items[0] if k.lower().startswith("lon")), None)
+        if lat_k and lon_k:
+            m = folium.Map(location=[items[0][lat_k], items[0][lon_k]], zoom_start=10)
+            mc = MarkerCluster().add_to(m)
+            for it in items:
+                folium.Marker([it[lat_k], it[lon_k]], popup=it["Name"]).add_to(mc)
+            st_folium(m, width=700, height=450)
+        if st.button("💾 Save This Itinerary", key="save_itin"):
+            itin = {
+                "id": uuid.uuid4().hex[:8],
+                "name": f"Trip {time.strftime('%Y-%m-%d %H:%M')}",
+                "created_at": int(time.time()),
+                "notes": prompt,
+                "items": items,
+                "generated_text": st.session_state.generated_itinerary
+            }
+            st.session_state.user["saved_itineraries"].append(itin)
+            st.success("Itinerary saved!")
 
-# --------------------- CHATBOT --------------------- #
-elif st.session_state.page == "💬 Chatbot":
-    st.header("💬 Chat with BROAD")
-    for msg in st.session_state.chat_messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+def render_chatbot():
+    st.markdown("<h2>💬 Chat with B.R.O.A.D.</h2>", unsafe_allow_html=True)
+    for msg in st.session_state.chat_messages[-10:]:
+        tag = "🧑 You" if msg["role"] == "user" else "💬 B.R.O.A.D."
+        st.markdown(f"**{tag}:** {msg['content']}")
+    user = st.text_input("Your message:", key="chat_input")
+    if user and st.button("Send", key="chat_send"):
+        loader = show_loading("Thinking…")
+        st.session_state.chat_messages.append({"role": "user", "content": user})
+        resp = model.generate_content(f"You are B.R.O.A.D.…\nUser: {user}")
+        st.session_state.chat_messages.append({"role": "assistant", "content": resp.text})
+        hide_loading(loader)
 
-    if user_input := st.chat_input("Ask me about Saint Lucia..."):
-        st.session_state.chat_messages.append({"role":"user","content":user_input})
-        with st.chat_message("user"):
-            st.markdown(user_input)
-        with st.spinner("Thinking..."):
-            try:
-                model = genai.GenerativeModel("gemini-2.0-pro")
-                chat = model.start_chat(history=st.session_state.gemini_history)
-                reply = chat.send_message(user_input).text
-                st.session_state.gemini_history.append({"role":"user","parts":[user_input]})
-                st.session_state.gemini_history.append({"role":"model","parts":[reply]})
-            except Exception as e:
-                reply = f"⚠️ Error: {e}"
-        st.session_state.chat_messages.append({"role":"assistant","content":reply})
-        with st.chat_message("assistant"):
-            st.markdown(reply)
+def render_trip_guide():
+    st.subheader("🧠 Trip Guide")
+    itins = st.session_state.user["saved_itineraries"]
+    if not itins:
+        st.info("Save an itinerary first.")
+        return
+    names = [i["name"] for i in itins]
+    sel = st.selectbox("Select a trip:", names, key="guide_select")
+    if st.button("Generate Guide", key="gen_guide"):
+        loader = show_loading("Building your guide…")
+        itin = next(i for i in itins if i["name"] == sel)
+        lines = "\n".join(f"- {item['Name']} ({item['Source']})" for item in itin["items"])
+        full = f"You are B.R.O.A.D.…\nUser’s itinerary:\n{lines}\nProvide packing, customs, and culinary tips."
+        resp = model.generate_content(full)
+        hide_loading(loader)
+        st.markdown("### 📖 Your Personalized Trip Guide")
+        st.markdown(resp.text)
+        lat_k = next((k for k in itin["items"][0] if k.lower().startswith("lat")), None)
+        lon_k = next((k for k in itin["items"][0] if k.lower().startswith("lon")), None)
+        if lat_k and lon_k:
+            m = folium.Map(location=[itin["items"][0][lat_k], itin["items"][0][lon_k]], zoom_start=10)
+            mc = MarkerCluster().add_to(m)
+            for it in itin["items"]:
+                folium.Marker([it[lat_k], it[lon_k]], popup=it["Name"]).add_to(mc)
+            st_folium(m, width=700, height=450)
 
-# --------------------- ACCOUNT PAGE --------------------- #
-elif st.session_state.page == "👤 Account":
-    st
+def render_saved_itineraries():
+    st.subheader("🗂 Saved Itineraries")
+    itins = st.session_state.user["saved_itineraries"]
+    if not itins:
+        st.info("No saved itineraries.")
+        return
+    for itin in itins:
+        with st.expander(itin["name"]):
+            st.write("Notes:", itin["notes"])
+            st.write("Created:", time.strftime("%Y-%m-%d %H:%M", time.localtime(itin["created_at"])))
+            st.markdown("### ✨ Itinerary Preview")
+            st.markdown(itin.get("generated_text", "No itinerary text found."))
+            lat_k = next((k for k in itin["items"][0] if k.lower().startswith("lat")), None)
+            lon_k = next((k for k in itin["items"][0] if k.lower().startswith("lon")), None)
+            if lat_k and lon_k:
+                m = folium.Map(location=[itin["items"][0][lat_k], itin["items"][0][lon_k]], zoom_start=10)
+                mc = MarkerCluster().add_to(m)
+                for it in itin["items"]:
+                    folium.Marker([it[lat_k], it[lon_k]], popup=it["Name"]).add_to(mc)
+                st_folium(m, width=700, height=450)
+            if st.button("Delete", key=f"del_{itin['id']}"):
+                itins.remove(itin)
+                st.rerun()
 
+# ------------------ Page Router ------------------ #
+pages = {
+    "🏠 Home":               render_home,
+    "👤 Profile Hub":        render_profile_hub,
+    "📅 Itinerary Planner":  render_itinerary_planner,
+    "🧠 Trip Guide":         render_trip_guide,
+    "💬 Chatbot":            render_chatbot,
+    "🗂 Saved Itineraries":  render_saved_itineraries
+}
+pages.get(st.session_state.page, render_home)()

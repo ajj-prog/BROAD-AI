@@ -1,16 +1,15 @@
-"Restaurant""",Location,Dishes,Highlights
-Dasheene at Ladera Resort,Soufrière,"A high-end, 'farm-to-table' menu with dishes inspired by local Creole and Caribbean cuisine, featuring fresh fish, lamb, and local produce.","Breathtaking views of the Pitons and the Caribbean Sea, especially at sunset."
-The Cliff at Cap Maison,"Cap Estate, Gros Islet","'Nouveau' French-West Indian cuisine, with a strong focus on fresh, local seafood and seasonal ingredients.",Located on a dramatic cliffside with stunning panoramic views of the ocean and Martinique.
-Orlando's Restaurant & Bar,Soufrière,"Farm-to-table Caribbean dishes, with a focus on fresh, local ingredients from nearby farms and fishermen.","Known for its chef-led, personalized dining experience."
-The Coal Pot,Castries,"French and Caribbean fusion cuisine, with a focus on fresh seafood and classic French dishes with a local twist.","A long-standing, family-owned restaurant with a romantic waterfront setting on the Vigie Marina."
-Jacques Waterfront Dining,Rodney Bay Marina,"French-Caribbean fusion, with a menu featuring fresh seafood, steaks, and a variety of vegetarian options.",An elegant and romantic atmosphere with stunning views of the marina.
-Pink Plantation House,"Morne Fortune, Castries","Locally sourced Creole dishes, including grilled fish and the unique 'Pink House salad' made with saltfish.",Located in a historic colonial house and art gallery with a beautiful tropical garden and views overlooking Castries.
-Rabot Restaurant by Hotel Chocolat,Soufrière,"A unique dining experience where every dish, both savory and sweet, incorporates cacao. Standout dishes include steaks marinated in roasted cacao and chocolate lava cake.","Situated on a lush cacao plantation with views of the Pitons, offering a 'Tree to Bar' experience."
-The Naked Fisherman,"Smugglers Cove, Cap Estate","A casual beachfront grill with a strong focus on fresh seafood, including spiny lobster, snow crab, and yellowfin tuna, served with local sides.",An open-air restaurant located in a secluded cove with direct beach access.
-Big Chef Steakhouse,Rodney Bay,"Expertly cooked dry-aged steaks, as well as a variety of seafood options.","A popular spot for fine dining and special occasions, with a reputation for high-quality grilled meats."
-Martha's Tables,Soufrière,"Specializes in home-cooked Creole meals, offering a menu of traditional local dishes.","A casual, family-run restaurant with a reputation for delicious and affordable local food."
-Roots 2,Marigot Bay,"Known for its fresh 'catch of the day' and other local, authentic Caribbean cuisine.","A popular spot with a great view of Marigot Bay, and was featured on the Netflix show 'Restaurants on the Edge.'"
-Chateau Mygo House of Seafood,Marigot Bay,"An exotic fusion of Creole and East Indian cooking, as well as being the only sushi bar on the west coast of the island.","A third-generation, family-owned restaurant with a waterside location in Marigot Bay."
-Spinnakers Beach Bar & Grill,"Reduit Beach, Rodney Bay","A mix of local Caribbean favorites like grilled fish and jerk chicken, alongside international comfort food.","An iconic, casual beachfront spot with a laid-back vibe and stunning views of the beach and sunset."
-Boucan by Hotel Chocolat,Soufrière,"Focuses on 'cacao cuisine' where the ingredient is used in innovative ways in both savory and sweet dishes, from main courses to cocktails.",Located on a sustainable cacao farm with open-air dining and panoramic views.
-Martha's Tables,Soufrière,"Known for serving delicious, home-cooked Caribbean meals. The menu is a family-run affair with vegetarian options available.",A very popular and highly-rated local restaurant known for great food at a reasonable price.
+Restaurant,Location,Dishes,Highlights,Latitude,Longitude
+Dasheene at Ladera Resort,Soufrière,"Farm-to-table Creole cuisine","Views of Pitons and Caribbean Sea",13.8532,-61.0486
+The Cliff at Cap Maison,Cap Estate,"French-West Indian seafood","Cliffside dining with ocean views",14.0903,-60.9532
+Orlando's Restaurant,Soufrière,"Local ingredients, chef-led experience","Personalized Caribbean dining",13.8570,-61.0595
+The Coal Pot,Castries,"French-Caribbean seafood","Waterfront setting on Vigie Marina",14.0167,-60.9944
+Jacques Waterfront Dining,Rodney Bay,"Seafood and vegetarian fusion","Elegant marina views",14.0734,-60.9451
+Pink Plantation House,Morne Fortune,"Grilled fish, saltfish salad","Historic house with garden views",13.9945,-60.9965
+Rabot Restaurant,Soufrière,"Cacao-infused cuisine","Tree-to-bar experience on cacao plantation",13.8560,-61.0590
+The Naked Fisherman,Smugglers Cove,"Beachfront seafood grill","Secluded cove with direct beach access",14.0910,-60.9510
+Big Chef Steakhouse,Rodney Bay,"Dry-aged steaks and seafood","Fine dining for special occasions",14.0730,-60.9455
+Martha's Tables,Soufrière,"Home-cooked Creole meals","Family-run, affordable local food",13.8572,-61.0592
+Roots 2,Marigot Bay,"Catch of the day, Caribbean cuisine","Great view of Marigot Bay",13.9850,-60.8860
+Chateau Mygo,Marigot Bay,"Creole and East Indian fusion","Waterside sushi bar and family-owned",13.9848,-60.8865
+Spinnakers Beach Bar,Reduit Beach,"Grilled fish, jerk chicken","Casual beachfront dining",14.0735,-60.9448
+Boucan by Hotel Chocolat,Soufrière,"Cacao cuisine and cocktails","Open-air dining with panoramic views",13.8565,-61.0585

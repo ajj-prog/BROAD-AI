@@ -1,0 +1,20 @@
+{
+  "amani.john@smc.edu.lc": {
+    "email": "amani.john@smc.edu.lc",
+    "salt": "6e1f870e4615460c95226578275cadfd",
+    "hash": "2f713d648299fb32750c8e403862de979b67e78c863933d9960114de32a36ec4",
+    "display_name": "J's the boss"
+  },
+  "amanijjohn@gmail.com": {
+    "email": "amanijjohn@gmail.com",
+    "salt": "f1e8ebd2135445d6b42d2be22e48ad85",
+    "hash": "9a5cf9468fb6b8cd026f2e989f85ac80eaae0501623f72f2d51d6b9a7ce81ceb",
+    "display_name": "."
+  },
+  "mytimejj211@gmail.com": {
+    "email": "mytimejj211@gmail.com",
+    "salt": "25340fb5997a428a88ee78fce6f1c348",
+    "hash": "748686422cf142921d98a7c0bd103914d462cfc14a058f1e0b0cb0acc65f230b",
+    "display_name": "."
+  }
+}

@@ -1,7 +1,7 @@
-Institution,Type,Location,Programs Offered
-"Sir Arthur Lewis Community College","Tertiary","Castries","Science, Arts, Business"
-"University of the West Indies Open Campus","Tertiary","Morne Fortune, Castries","Distance and online learning in various fields, including business, education, and social sciences."
-"Saint Mary's College","Secondary","Vigie, Castries","General secondary education with a strong emphasis on academics, sports, and community service."
-"St. Joseph's Convent","Secondary","Micoud Street, Castries","Secondary education for girls, focusing on a broad curriculum and personal development."
-"Vieux Fort Comprehensive Secondary School","Secondary","Vieux Fort","A wide range of subjects in arts, sciences, and technical vocational studies for students in the southern part of the island."
-"Corinth Secondary School","Secondary","Corinth, Gros Islet","A comprehensive curriculum covering arts, sciences, and business studies."
+Institution,Type,Location,Programs Offered,Latitude,Longitude
+"Sir Arthur Lewis Community College","Tertiary","Castries","Science, Arts, Business",13.9940,-60.9960
+"University of the West Indies Open Campus","Tertiary","Morne Fortune, Castries","Distance and online learning in business, education, and social sciences",13.9945,-60.9965
+"Saint Mary's College","Secondary","Vigie, Castries","Academics, sports, and community service",14.0162,-60.9941
+"St. Joseph's Convent","Secondary","Micoud Street, Castries","Secondary education for girls with broad curriculum",14.0108,-60.9872
+"Vieux Fort Comprehensive Secondary School","Secondary","Vieux Fort","Arts, sciences, and technical vocational studies",13.7500,-60.9500
+"Corinth Secondary School","Secondary","Corinth, Gros Islet","Comprehensive curriculum in arts, sciences, and business",14.0500,-60.9500

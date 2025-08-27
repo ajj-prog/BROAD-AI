@@ -14,7 +14,7 @@ import os
 # ------------------ Gemini & Data ------------------ #
 load_dotenv()
 genai.configure(api_key=os.getenv("SECRET_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.0-flash")
 tourism_df    = pd.read_csv("tourism.csv").assign(Source="Tourism")
 cultural_df   = pd.read_csv("cultural.csv").assign(Source="Cultural")
 edu_df        = pd.read_csv("edu.csv").assign(Source="Education")

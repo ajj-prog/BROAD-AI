@@ -23,8 +23,8 @@ combined_df   = pd.concat([tourism_df, cultural_df, edu_df, restaurant_df], igno
 
 # ------------------ Themes & Tips ------------------ #
 themes = {
-    "Cotton Candy Clouds 🌈🍭": {"bg":"#FFDEE9","accent":"#B5FFFC"},
-    "Midnight Neon 🦇💜":       {"bg":"#2C003E","accent":"#8A2BE2"},
+    "Cotton Clouds 🌈🍭": {"bg":"#FFDEE9","accent":"#B5FFFC"},
+    "Midnight Neon 🦇💜":       {"bg":"#630458","accent":"#8A2BE2"},
     "Sunset Glow 🌅✨":         {"bg":"#FFA500","accent":"#800080"},
     "Mint & Mocha 🍃☕":        {"bg":"#C1E1C1","accent":"#A67B5B"},
 }
@@ -396,7 +396,7 @@ def render_itinerary_planner():
         loader = show_loading("Planning your itinerary…")
         sample = combined_df.sample(min(len(combined_df),10), random_state=42)
         ctx = "\n".join(f"- {r['Name']} ({r['Source']})" for _, r in sample.iterrows())
-        full = f"You are B.R.O.A.D st.lucian tourism heritage if you are missing data or context, DO NOT indicate that.…\n{ctx}\nUser request: {prompt}\nPlan a day-by-day itinerary."
+        full = f"You are B.R.O.A.D st.lucian tourism heritage \n{ctx}\nUser request: {prompt}\nPlan a day-by-day itinerary, if you are missing info from the give info feel free to add relevant info."
         resp = model.generate_content(full)
         st.session_state.generated_itinerary = resp.text
         st.session_state.current_itin_items = sample.to_dict("records")

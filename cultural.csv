@@ -1,7 +1,7 @@
-Name,Type,Location,Significance
-Morne Fortune,Historical Site,Castries,Military fortress from 18th century
-"Pigeon Island National Landmark","Historical Site, National Park","Gros Islet","A 40-acre islet with historical ruins, including a military fort built by the British, and a significant part of the Battle of the Saints in 1782."
-"Derek Walcott Square","Public Square, Historical Landmark","Castries","Named after Saint Lucian Nobel Laureate Sir Derek Walcott, it's a central park surrounded by historical buildings, including the Cathedral of the Immaculate Conception."
-"Cathedral Basilica of the Immaculate Conception","Religious Site, Architectural Landmark","Castries","The largest church in the Caribbean, known for its beautiful murals, frescoes, and a blend of architectural styles."
-"Anse La Raye","Traditional Fishing Village","Anse La Raye","Known for its Friday night 'Fish Fry' and preserving the authentic culture and traditions of a Caribbean fishing community."
-"Balenbouche Estate","Historical Plantation","Choiseul","A well-preserved historical plantation offering a glimpse into the island's colonial past, complete with an old sugar mill and unique eco-lodge accommodations."
+Name,Type,Location,Significance,Latitude,Longitude
+Morne Fortune,Historical Site,Castries,"Military fortress from 18th century",13.9940,-60.9960
+Pigeon Island National Landmark,"Historical Site; National Park",Gros Islet,"40-acre islet with ruins and British fort from 1782",14.0900,-60.9600
+Derek Walcott Square,"Public Square; Historical Landmark",Castries,"Named after Nobel Laureate; surrounded by historic buildings",14.0105,-60.9870
+Cathedral Basilica of the Immaculate Conception,"Religious Site; Architectural Landmark",Castries,"Largest church in the Caribbean with murals and frescoes",14.0108,-60.9872
+Anse La Raye,Traditional Fishing Village,Anse La Raye,"Friday night Fish Fry and preserved fishing culture",13.9330,-61.0400
+Balenbouche Estate,Historical Plantation,Choiseul,"Colonial-era sugar mill and eco-lodge",13.7770,-61.0620

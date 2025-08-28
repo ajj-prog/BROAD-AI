@@ -465,7 +465,7 @@ def render_trip_guide():
         lines = "\n".join(f"- {item['Name']} ({item['Source']})" 
                           for item in itin["items"])
         prompt = (
-            "You are B.R.O.A.D.…\n"
+            "You are B.R.O.A.D, a st.lucia tourism heritage bot.…\n"
             f"User’s itinerary:\n{lines}\n"
             "Provide packing, customs, and culinary tips."
         )

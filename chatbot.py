@@ -488,8 +488,6 @@ def render_saved_itineraries():
                 for it in itin["items"]:
                     folium.Marker([it[lat_k], it[lon_k]], popup=it["Name"]).add_to(mc)
                 st_folium(m, width=700, height=450)
-for stop in st.session_state.itinerary:
-    st.markdown(f"**{stop['name']}**  📍 {stop['location']}")
 
 # ------------------ Page Router ------------------ #
 pages = {

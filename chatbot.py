@@ -266,10 +266,6 @@ with st.sidebar:
         if st.button(label, key=key):
             st.session_state.page = label
 
-    st.markdown("### 🎭 Theme Selector")
-    if st.button("Change Theme 🎨", key="open_theme_modal"):
-        st.session_state.show_theme_modal = True
-
     st.markdown("### 💡 Tip of the Moment")
     if time.time() - st.session_state.last_tip_time > 10:
         st.session_state.tip_index = (st.session_state.tip_index + 1) % len(tips)

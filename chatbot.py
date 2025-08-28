@@ -444,29 +444,62 @@ def render_chatbot():
 
 def render_trip_guide():
     st.subheader("🧠 Trip Guide")
-    itins = st.session_state.user["saved_itineraries"]
+
+    itins = st.session_state.user.get("saved_itineraries", [])
     if not itins:
         st.info("Save an itinerary first.")
         return
+
+    # Build the select box
     names = [i["name"] for i in itins]
     sel = st.selectbox("Select a trip:", names, key="guide_select")
+
+    # Initialize storage for generated guides if needed
+    if "trip_guides" not in st.session_state:
+        st.session_state.trip_guides = {}
+
+    # When the user clicks generate, call the model and stash the result
     if st.button("Generate Guide", key="gen_guide"):
         loader = show_loading("Building your guide…")
         itin = next(i for i in itins if i["name"] == sel)
-        lines = "\n".join(f"- {item['Name']} ({item['Source']})" for item in itin["items"])
-        full = f"You are B.R.O.A.D.…\nUser’s itinerary:\n{lines}\nProvide packing, customs, and culinary tips."
-        resp = model.generate_content(full)
+        lines = "\n".join(f"- {item['Name']} ({item['Source']})" 
+                          for item in itin["items"])
+        prompt = (
+            "You are B.R.O.A.D.…\n"
+            f"User’s itinerary:\n{lines}\n"
+            "Provide packing, customs, and culinary tips."
+        )
+        resp = model.generate_content(prompt)
         hide_loading(loader)
+        # Save the text under this trip’s name
+        st.session_state.trip_guides[sel] = resp.text
+
+    # After generation (or on reload), always render whatever’s stored
+    guide_text = st.session_state.trip_guides.get(sel)
+    if guide_text:
         st.markdown("### 📖 Your Personalized Trip Guide")
-        st.markdown(resp.text)
-        lat_k = next((k for k in itin["items"][0] if k.lower().startswith("lat")), None)
-        lon_k = next((k for k in itin["items"][0] if k.lower().startswith("lon")), None)
+        st.markdown(guide_text)
+
+        # Rebuild the map for the selected itinerary
+        itin = next(i for i in itins if i["name"] == sel)
+        items = itin["items"]
+        lat_k = next((k for k in items[0] if k.lower().startswith("lat")), None)
+        lon_k = next((k for k in items[0] if k.lower().startswith("lon")), None)
+
         if lat_k and lon_k:
-            m = folium.Map(location=[itin["items"][0][lat_k], itin["items"][0][lon_k]], zoom_start=10)
+            m = folium.Map(
+                location=[items[0][lat_k], items[0][lon_k]],
+                zoom_start=10
+            )
             mc = MarkerCluster().add_to(m)
-            for it in itin["items"]:
-                folium.Marker([it[lat_k], it[lon_k]], popup=it["Name"]).add_to(mc)
+            for stop in items:
+                folium.Marker(
+                    [stop[lat_k], stop[lon_k]],
+                    popup=stop["Name"]
+                ).add_to(mc)
             st_folium(m, width=700, height=450)
+    else:
+        st.info("Click **Generate Guide** to build your personalized trip guide.")
 
 def render_saved_itineraries():
     st.subheader("🗂 Saved Itineraries")

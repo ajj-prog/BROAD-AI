@@ -50,6 +50,7 @@ st.session_state.setdefault("current_itin_items", [])
 st.session_state.setdefault("tip_index", 0)
 st.session_state.setdefault("last_tip_time", time.time())
 
+
 # ------------------ Login ------------------ #
 def render_login():
     st.title("🔐 Sign Up / Log In")
@@ -274,6 +275,7 @@ with st.sidebar:
         st.session_state.tip_index = (st.session_state.tip_index + 1) % len(tips)
         st.session_state.last_tip_time = time.time()
     st.markdown(f"**{tips[st.session_state.tip_index]}**")
+
 # ------------------ Page Functions ------------------ #
 def render_home():
     from datetime import datetime
@@ -440,30 +442,6 @@ def render_chatbot():
         st.session_state.chat_messages.append({"role": "assistant", "content": resp.text})
         hide_loading(loader)
 
-def render_saved_itineraries():
-    st.subheader("🗂 Saved Itineraries")
-    itins = st.session_state.user["saved_itineraries"]
-    if not itins:
-        st.info("No saved itineraries.")
-        return
-    for itin in itins:
-        with st.expander(itin["name"]):
-            st.write("Notes:", itin["notes"])
-            st.write("Created:", time.strftime("%Y-%m-%d %H:%M", time.localtime(itin["created_at"])))
-            st.markdown("### ✨ Itinerary Preview")
-            st.markdown(itin.get("generated_text", "No itinerary text found."))
-            lat_k = next((k for k in itin["items"][0] if k.lower().startswith("lat")), None)
-            lon_k = next((k for k in itin["items"][0] if k.lower().startswith("lon")), None)
-            if lat_k and lon_k:
-                m = folium.Map(location=[itin["items"][0][lat_k], itin["items"][0][lon_k]], zoom_start=10)
-                mc = MarkerCluster().add_to(m)
-                for it in itin["items"]:
-                    folium.Marker([it[lat_k], it[lon_k]], popup=it["Name"]).add_to(mc)
-                st_folium(m, width=700, height=450)
-            if st.button("Delete", key=f"del_{itin['id']}"):
-                itins.remove(itin)
-                st.rerun()
-                
 def render_trip_guide():
     st.subheader("🧠 Trip Guide")
     itins = st.session_state.user["saved_itineraries"]
@@ -489,6 +467,29 @@ def render_trip_guide():
             for it in itin["items"]:
                 folium.Marker([it[lat_k], it[lon_k]], popup=it["Name"]).add_to(mc)
             st_folium(m, width=700, height=450)
+
+def render_saved_itineraries():
+    st.subheader("🗂 Saved Itineraries")
+    itins = st.session_state.user["saved_itineraries"]
+    if not itins:
+        st.info("No saved itineraries.")
+        return
+    for itin in itins:
+        with st.expander(itin["name"]):
+            st.write("Notes:", itin["notes"])
+            st.write("Created:", time.strftime("%Y-%m-%d %H:%M", time.localtime(itin["created_at"])))
+            st.markdown("### ✨ Itinerary Preview")
+            st.markdown(itin.get("generated_text", "No itinerary text found."))
+            lat_k = next((k for k in itin["items"][0] if k.lower().startswith("lat")), None)
+            lon_k = next((k for k in itin["items"][0] if k.lower().startswith("lon")), None)
+            if lat_k and lon_k:
+                m = folium.Map(location=[itin["items"][0][lat_k], itin["items"][0][lon_k]], zoom_start=10)
+                mc = MarkerCluster().add_to(m)
+                for it in itin["items"]:
+                    folium.Marker([it[lat_k], it[lon_k]], popup=it["Name"]).add_to(mc)
+                st_folium(m, width=700, height=450)
+for stop in st.session_state.itinerary:
+    st.markdown(f"**{stop['name']}**  📍 {stop['location']}")
 
 # ------------------ Page Router ------------------ #
 pages = {
